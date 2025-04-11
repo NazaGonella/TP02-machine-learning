@@ -3,11 +3,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class LogisticRegression:
-    def __init__(self, x : np.ndarray, b : np.ndarray, L1 : float = 0, L2 : float = 0, initial_weight_value : float = 1):
+    def __init__(self, x : np.ndarray, b : np.ndarray, L2 : float = 0, initial_weight_value : float = 1):
         self.x : np.ndarray = np.array(np.c_[np.ones(x.shape[0]), x], dtype=np.float64)   # agrego columna de unos para el bias.
         self.w : np.ndarray = np.full(shape=self.x.shape[1], fill_value=initial_weight_value)
         self.b : np.ndarray = np.array(b, dtype=np.float64)
-        self.L1 : int = L1
         self.L2 : int = L2
         self.tp : int = 0
         self.tn : int = 0
