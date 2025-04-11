@@ -86,5 +86,3 @@ class LogisticRegression:
         print(f'{'BIAS':14}', '(w0): ', self.w[0])
         for i in range(self.x.shape[1] - 1):
             print(f'{weight_names[i]:14} (w{i+1}): ', self.w[i+1])
-
-print(1/(1-np.exp(-2)))
