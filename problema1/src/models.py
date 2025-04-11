@@ -7,8 +7,13 @@ class LogisticRegression:
         self.x : np.ndarray = np.array(np.c_[np.ones(x.shape[0]), x], dtype=np.float64)   # agrego columna de unos para el bias.
         self.w : np.ndarray = np.full(shape=self.x.shape[1], fill_value=initial_weight_value)
         self.b : np.ndarray = np.array(b, dtype=np.float64)
-        self.L1 = L1
-        self.L2 = L2
+        self.L1 : int = L1
+        self.L2 : int = L2
+        self.tp : int = 0
+        self.tn : int = 0
+        self.fp : int = 0
+        self.fn : int = 0
+        self.pred_probs : np.ndarray[float] = np.array([])
 
     def fit_gradient_descent(self, step_size : float, tolerance : float = -1, max_number_of_steps : int = -1):
         attempts = 0
@@ -39,13 +44,44 @@ class LogisticRegression:
         termL2 : np.ndarray = 2 * self.L2 * self.w
         return grad + termL2
 
-    def f_score(tp : int, fp : int, fn : int) -> float:
-        return (2*tp) / ((2*tp) + fp + fn)
-
-    def predict(self, input : np.ndarray) -> np.ndarray[int]:
+    def predict(self, input : np.ndarray) -> None:
         input_with_bias : np.ndarray = np.array(np.c_[np.ones(input.shape[0]), input], dtype=np.float64)   # agrego columna de unos para el bias.
-        probs : np.ndarray = self.sigmoid_function(input_with_bias @ self.w)
-        return (probs > 0.5).astype(int)
+        self.pred_probs = self.sigmoid_function(input_with_bias @ self.w)
+
+    def evaluate(self, ground_truth : np.ndarray, threshold : float = 0.5) -> None:
+        pred : np.ndarray[int] = (self.pred_probs > threshold).astype(int)
+        self.tp = np.sum((pred == 1) & (ground_truth == 1))
+        self.tn = np.sum((pred == 0) & (ground_truth == 0))
+        self.fp = np.sum((pred == 1) & (ground_truth == 0))
+        self.fn = np.sum((pred == 0) & (ground_truth == 1))
+
+    def get_confusion_matrix(self) -> tuple[int, int, int, int]:
+        return (self.tp, self.tn, self.fp, self.fn)
+    
+    def get_accuracy(self) -> float:
+        if (self.tp + self.tn + self.fp + self.fn) == 0:
+            return 0.0
+        return (self.tp + self.tn) / (self.tp + self.tn + self.fp + self.fn)
+
+    def get_false_positive_rate(self) -> float:
+        if (self.fp + self.tn) == 0:
+            return 0.0
+        return (self.fp) / (self.fp + self.tn)
+    
+    def get_precision(self) -> float:
+        if (self.tp + self.fp) == 0:
+            return 0.0
+        return (self.tp) / (self.tp + self.fp)
+
+    def get_recall(self) -> float:  # También True Positive Rate
+        if (self.tp + self.fn) == 0:
+            return 0.0
+        return (self.tp) / (self.tp + self.fn)
+    
+    def get_f_score(self) -> float:
+        if ((2*self.tp) + self.fp + self.fn) == 0:
+            return 0.0
+        return (2*self.tp) / ((2*self.tp) + self.fp + self.fn)
 
     def print_weights(self, weight_names : list[str]) -> None:
         print(f'{'BIAS':14}', '(w0): ', self.w[0])
