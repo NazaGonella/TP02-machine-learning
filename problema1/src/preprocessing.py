@@ -25,3 +25,8 @@ def standardize_numeric_columns(df : pd.DataFrame) -> pd.DataFrame:
     numeric_columns : pd.DataFrame = _df.select_dtypes(include=np.number).columns
     _df[numeric_columns] = (_df[numeric_columns] - _df[numeric_columns].mean()) / _df[numeric_columns].std()
     return _df
+
+def one_hot_encoding(df : pd.DataFrame, column : str) -> pd.DataFrame:
+    _df : pd.DataFrame = df.copy()
+    # return pd.get_dummies(_df, prefix=[column], dtype=float)
+    return pd.get_dummies(_df, prefix=[column], dtype=bool)
