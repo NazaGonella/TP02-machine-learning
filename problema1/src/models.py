@@ -43,8 +43,10 @@ class LogisticRegression:
     def f_score(tp : int, fp : int, fn : int) -> float:
         return (2*tp) / ((2*tp) + fp + fn)
 
-    def predict(self, input : np.ndarray) -> float:
-        return self.sigmoid_function(self.w @ input)
+    def predict(self, input : np.ndarray) -> np.ndarray[int]:
+        input_with_bias : np.ndarray = np.array(np.c_[np.ones(input.shape[0]), input], dtype=np.float64)   # agrego columna de unos para el bias.
+        probs : np.ndarray = self.sigmoid_function(input_with_bias @ self.w)
+        return (probs > 0.5).astype(int)
 
     def print_weights(self, weight_names : list[str]) -> None:
         print(f'{'BIAS':14}', '(w0): ', self.w[0])
