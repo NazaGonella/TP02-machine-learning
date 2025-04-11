@@ -24,7 +24,7 @@ class LogisticRegression:
             self.w = self.w - (step_size * (gradient))
             attempts += 1
             # print(self.error_cuadratico_medio())
-            print(self.binary_cross_entropy())
+            # print(self.binary_cross_entropy())
 
     def sigmoid_function(self, x : float) -> float:
         return 1/(1+np.exp(-x))
