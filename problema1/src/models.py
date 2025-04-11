@@ -28,7 +28,6 @@ class LogisticRegression:
     def binary_cross_entropy(self) -> float:
         pred : float = self.sigmoid_function(self.x @ self.w)
         pred = np.clip(pred, 1e-15, 1 - 1e-15)  # para evitar log(0)
-        # return -((self.b * np.log(pred)) + ((1 - self.b) * np.log(1 - pred)))
         grad : float  = -np.sum(self.b * np.log(pred) + ((1 - self.b) * np.log(1 - pred)))
         termL2 : float = self.L2 * (self.w.T @ self.w)
         return grad + termL2
@@ -36,8 +35,8 @@ class LogisticRegression:
     def gradiente_cross_entropy(self) -> np.ndarray:
         pred : float = self.sigmoid_function(self.x @ self.w)
         pred = np.clip(pred, 1e-15, 1 - 1e-15)  # para evitar log(0)
-        grad : float = -np.sum(((self.b - pred) * self.x.T))
-        termL2 : float = 2 * self.L2 * self.w
+        grad : np.ndarray = -self.x.T @ (self.b - pred)
+        termL2 : np.ndarray = 2 * self.L2 * self.w
         return grad + termL2
 
     def f_score(tp : int, fp : int, fn : int) -> float:
