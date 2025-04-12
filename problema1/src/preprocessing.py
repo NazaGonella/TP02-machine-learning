@@ -28,7 +28,6 @@ def standardize_numeric_columns(df : pd.DataFrame) -> pd.DataFrame:
 
 def one_hot_encoding(df : pd.DataFrame, column : str) -> pd.DataFrame:
     _df : pd.DataFrame = df.copy()
-    # return pd.get_dummies(_df, prefix=[column], dtype=float)
     return pd.get_dummies(_df, prefix=[column], dtype=bool)
 
 def process_and_stardardize(df : pd.DataFrame, filename : str = "", save_path : str = "") -> pd.DataFrame:
@@ -41,3 +40,13 @@ def process_and_stardardize(df : pd.DataFrame, filename : str = "", save_path : 
         df_processed.to_csv(f'{save_path}/{filename}_processed.csv', index=False)
         df_processed_and_standardized.to_csv(f'{save_path}/{filename}_processed_and_standardized.csv')
     return df_processed_and_standardized
+
+def undersample(df: pd.DataFrame, objective_class: str = '') -> pd.DataFrame:
+    _df : pd.DataFrame = df.copy()
+    class_0 : pd.Series = df[df[objective_class] == 0]
+    class_1 : pd.Series = df[df[objective_class] == 1]
+    majority : pd.Series = class_0 if len(class_0) > len(class_1) else class_1
+    minority : pd.Series = class_1 if len(class_0) > len(class_1) else class_0
+    majority_sampled : pd.Series = majority.sample(len(minority), random_state=42)
+    # balanced_df : pd.DataFrame = pd.concat([minority, majority_sampled]).sample(frac=1, random_state=42).reset_index(drop=True)
+    return pd.concat([minority, majority_sampled])
