@@ -16,6 +16,8 @@ def remove_na_rows(df : pd.DataFrame) -> pd.DataFrame:
 
 def fill_na_values(df : pd.DataFrame) -> pd.DataFrame:
     _df : pd.DataFrame = df.copy()
+    numeric_columns : pd.Series = _df.select_dtypes(include='number').columns
+    _df[numeric_columns] = _df[numeric_columns].clip(lower=0) # Me aseguro que no haya valores negativos
     _df = _df.fillna(value=_df.median(numeric_only=True))
     _df['CellType'] = _df['CellType'].fillna('Unknown')
     return _df
@@ -43,18 +45,29 @@ def process_and_stardardize(df : pd.DataFrame, filename : str = "", save_path : 
 
 def undersample(df: pd.DataFrame, objective_class: str = '') -> pd.DataFrame:
     _df : pd.DataFrame = df.copy()
-    class_0 : pd.Series = df[df[objective_class] == 0]
-    class_1 : pd.Series = df[df[objective_class] == 1]
-    majority : pd.Series = class_0 if len(class_0) > len(class_1) else class_1
-    minority : pd.Series = class_1 if len(class_0) > len(class_1) else class_0
-    majority_sampled : pd.Series = majority.sample(len(minority), random_state=42)
+    class_0 : pd.DataFrame = _df[df[objective_class] == 0]
+    class_1 : pd.DataFrame = _df[df[objective_class] == 1]
+    majority : pd.DataFrame = class_0 if len(class_0) > len(class_1) else class_1
+    minority : pd.DataFrame = class_1 if len(class_0) > len(class_1) else class_0
+    majority_sampled : pd.DataFrame = majority.sample(len(minority), random_state=42)
     return pd.concat([minority, majority_sampled]).sample(frac=1) # shuffleo
 
 def oversample_by_duplication(df: pd.DataFrame, objective_class: str = '') -> pd.DataFrame:
     _df : pd.DataFrame = df.copy()
-    class_0 : pd.Series = df[df[objective_class] == 0]
-    class_1 : pd.Series = df[df[objective_class] == 1]
-    majority : pd.Series = class_0 if len(class_0) > len(class_1) else class_1
-    minority : pd.Series = class_1 if len(class_0) > len(class_1) else class_0
-    minority_sampled : pd.Series = minority.sample(len(majority) - len(minority), replace=True, random_state=42) # replace=True permite samplear una fila mas de una vez
+    class_0 : pd.DataFrame = _df[df[objective_class] == 0]
+    class_1 : pd.DataFrame = _df[df[objective_class] == 1]
+    majority : pd.DataFrame = class_0 if len(class_0) > len(class_1) else class_1
+    minority : pd.DataFrame = class_1 if len(class_0) > len(class_1) else class_0
+    minority_sampled : pd.DataFrame = minority.sample(len(majority) - len(minority), replace=True, random_state=42) # replace=True permite samplear una fila mas de una vez
+    minority.info(verbose=False)
+    # print(minority_sampled)
     return pd.concat([minority, minority_sampled, majority]).sample(frac=1) # shuffleo
+
+def oversample_by_SMOTE(df: pd.DataFrame, objective_class: str = '') -> pd.DataFrame:
+    _df : pd.DataFrame = df.copy()
+    class_0 : pd.DataFrame = _df[df[objective_class] == 0]
+    class_1 : pd.DataFrame = _df[df[objective_class] == 1]
+    minority : pd.DataFrame = class_1 if len(class_0) > len(class_1) else class_0
+    numeric_columns : list[str] = ['CellSize', 'CellShape', 'NucleusDensity', 'ChromatinTexture', 'CytoplasmSize', 'CellAdhesion', 'MitosisRate', 'NuclearMembrane', 'GrowthFactor', 'OxygenSaturation', 'Vascularization', 'InflammationMarkers']
+    boolean_columns : list[bool] = ['Diagnosis']
+    return pd.DataFrame()
