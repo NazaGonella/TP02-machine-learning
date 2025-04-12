@@ -86,3 +86,37 @@ class LogisticRegression:
         print(f'{'BIAS':14}', '(w0): ', self.w[0])
         for i in range(self.x.shape[1] - 1):
             print(f'{weight_names[i]:14} (w{i+1}): ', self.w[i+1])
+
+    def get_roc_points(self, ground_truth : np.ndarray, k_points : int = 10) -> tuple[list[float], list[float]]:
+        original_tp : int = self.tp
+        original_tn : int = self.tn
+        original_fp : int = self.fp
+        original_fn : int = self.fn
+        recalls : list[float] = []
+        precisions : list[float] = []
+        for threshold in np.linspace(0, 1, k_points):
+            self.evaluate(ground_truth, threshold=threshold)
+            recalls.append(self.get_recall())
+            precisions.append(self.get_precision())
+        self.tp : int = original_tp
+        self.tn : int = original_tn
+        self.fp : int = original_fp
+        self.fn : int = original_fn
+        return (recalls, precisions)
+
+    def get_pr_points(self, ground_truth : np.ndarray, k_points : int = 10) -> tuple[list[float], list[float]]:
+        original_tp : int = self.tp
+        original_tn : int = self.tn
+        original_fp : int = self.fp
+        original_fn : int = self.fn
+        trues_positives_rateses : list[float] = []
+        falses_positives_rateses : list[float] = []
+        for threshold in np.linspace(0, 1, k_points):
+            self.evaluate(ground_truth, threshold=threshold)
+            trues_positives_rateses.append(self.get_recall())
+            falses_positives_rateses.append(self.get_false_positive_rate())
+        self.tp : int = original_tp
+        self.tn : int = original_tn
+        self.fp : int = original_fp
+        self.fn : int = original_fn
+        return (falses_positives_rateses, trues_positives_rateses)
