@@ -48,5 +48,13 @@ def undersample(df: pd.DataFrame, objective_class: str = '') -> pd.DataFrame:
     majority : pd.Series = class_0 if len(class_0) > len(class_1) else class_1
     minority : pd.Series = class_1 if len(class_0) > len(class_1) else class_0
     majority_sampled : pd.Series = majority.sample(len(minority), random_state=42)
-    # balanced_df : pd.DataFrame = pd.concat([minority, majority_sampled]).sample(frac=1, random_state=42).reset_index(drop=True)
-    return pd.concat([minority, majority_sampled])
+    return pd.concat([minority, majority_sampled]).sample(frac=1) # shuffleo
+
+def oversample_by_duplication(df: pd.DataFrame, objective_class: str = '') -> pd.DataFrame:
+    _df : pd.DataFrame = df.copy()
+    class_0 : pd.Series = df[df[objective_class] == 0]
+    class_1 : pd.Series = df[df[objective_class] == 1]
+    majority : pd.Series = class_0 if len(class_0) > len(class_1) else class_1
+    minority : pd.Series = class_1 if len(class_0) > len(class_1) else class_0
+    minority_sampled : pd.Series = minority.sample(len(majority) - len(minority), replace=True, random_state=42) # replace=True permite samplear una fila mas de una vez
+    return pd.concat([minority, minority_sampled, majority]).sample(frac=1) # shuffleo
