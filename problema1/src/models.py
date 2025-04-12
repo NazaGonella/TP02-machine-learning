@@ -86,6 +86,14 @@ class LogisticRegression:
         print(f'{'BIAS':14}', '(w0): ', self.w[0])
         for i in range(self.x.shape[1] - 1):
             print(f'{weight_names[i]:14} (w{i+1}): ', self.w[i+1])
+    
+    def print_metrics(self) -> None:
+        print("ACCURACY             : ", self.get_accuracy())
+        print("PRECISION            : ", self.get_precision())
+        print("RECALL               : ", self.get_recall())
+        print("FALSE POSITIVE RATE  : ", self.get_false_positive_rate())
+        print("F-SCORE              : ", self.get_f_score())
+        
 
     def get_roc_points(self, ground_truth : np.ndarray, k_points : int = 10) -> tuple[list[float], list[float]]:
         original_tp : int = self.tp
