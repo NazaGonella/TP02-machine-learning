@@ -17,27 +17,12 @@ class LogisticRegression:
 
     def fit_gradient_descent(self, step_size : float, tolerance : float = -1, max_number_of_steps : int = -1):
         attempts = 0
-        # print(self.x.shape)
         while True:
             gradient = self.gradiente_cross_entropy()
             if (np.linalg.norm(gradient) <= tolerance and tolerance != -1) or (attempts >= max_number_of_steps and max_number_of_steps != -1):
                 break
             self.w = self.w - (step_size * (gradient))
             attempts += 1
-            # print(self.error_cuadratico_medio())
-            # print(self.binary_cross_entropy())
-    
-    def fit_gradient_descent_reweighted(self, minoritary_class_value : int, step_size : float, tolerance : float = -1, max_number_of_steps : int = -1):
-        attempts = 0
-        # print(self.x.shape)
-        while True:
-            gradient = self.gradiente_cross_entropy_reweighted(minoritary_class_value)
-            if (np.linalg.norm(gradient) <= tolerance and tolerance != -1) or (attempts >= max_number_of_steps and max_number_of_steps != -1):
-                break
-            self.w = self.w - (step_size * (gradient))
-            attempts += 1
-            # print(self.error_cuadratico_medio())
-            # print(self.binary_cross_entropy())
 
     def sigmoid_function(self, x : float) -> float:
         return 1/(1+np.exp(-x))
@@ -54,18 +39,6 @@ class LogisticRegression:
         pred = np.clip(pred, 1e-15, 1 - 1e-15)  # para evitar log(0)
         grad : np.ndarray = -self.x.T @ (self.b - pred)
         termL2 : np.ndarray = 2 * self.L2 * self.w
-        return grad + termL2
-    
-    def gradiente_cross_entropy_reweighted(self, minority_class_value : int) -> np.ndarray:
-        pred : float = self.sigmoid_function(self.x @ self.w)
-        pred = np.clip(pred, 1e-15, 1 - 1e-15)  # para evitar log(0)
-        pi1 = np.mean(self.b == minority_class_value)  # clase minoritaria
-        pi2 = np.mean(self.b == (0 if minority_class_value == 1 else 1))  # clase mayoritaria
-        C = pi2 / pi1
-        weights = np.where(self.b == minority_class_value, C, 1.0)  # aplicar C solo a la clase minoritaria
-
-        grad: np.ndarray = -self.x.T @ ((self.b - pred) * weights)
-        termL2: np.ndarray = 2 * self.L2 * self.w
         return grad + termL2
 
     def predict(self, input : np.ndarray) -> None:
