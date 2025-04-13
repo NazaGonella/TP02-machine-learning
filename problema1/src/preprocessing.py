@@ -83,48 +83,6 @@ def oversample_by_duplication(df: pd.DataFrame, objective_class: str = '') -> pd
     # print(minority_sampled)
     return pd.concat([minority, minority_sampled, majority]).sample(frac=1) # shuffleo
 
-# def oversample_by_SMOTE(df: pd.DataFrame, objective_class: str = '', k : int = 2) -> pd.DataFrame:
-#     _df : pd.DataFrame = df.copy()
-#     class_0 : pd.DataFrame = _df[df[objective_class] == 0]
-#     class_1 : pd.DataFrame = _df[df[objective_class] == 1]
-#     majority : pd.DataFrame = class_0 if len(class_0) > len(class_1) else class_1
-#     minority : pd.DataFrame = class_1 if len(class_0) > len(class_1) else class_0
-#     numeric_columns : pd.Index = df.select_dtypes(include=np.number).columns
-#     boolean_columns : pd.Index = df.select_dtypes(include=bool).columns
-#     new_samples : list[pd.Series] = []
-#     for i in range(len(majority) - len(minority)):
-#         random_sample : pd.Series = minority.sample(1, random_state=42+i).iloc[0]   # Me quedo con la primer y única fila del DataFrame que devuelve sample()
-#         for n in numeric_columns.values:
-#             n_column_matrix : np.ndarray = _df[n].to_numpy()
-#             random_sample_vector : np.ndarray = random_sample.to_numpy()
-#             distance_column : np.ndarray = np.linalg.norm(n_column_matrix - random_sample_vector)
-#             k_indices : np.ndarray = np.argpartition(distance_column, k+1, axis=1)[:, :k+1]
-#             for j in k_indices:
-#                 nearest_sample : pd.Series = minority.iloc[j]
-#                 new_sample : pd.Series = 
-
-#     return pd.DataFrame()
-
-# def oversampling_SMOTE(df : pd.DataFrame, col ,seed,k=5):
-#     np.random.seed(seed)
-#     df0=df[df[col]==0].copy()
-#     df1=df[df[col]==1].copy()
-#     if df0.shape[0]>df1.shape[0]:
-#         df0,df1=df1,df0
-    
-#     while df0.shape[0]<df1.shape[0]:
-#         i=np.random.randint(0,df0.shape[0])
-#         nodechosen=df0.iloc[i]
-#         distances = np.linalg.norm(df0.values - nodechosen.values, axis=1)
-#         knn=np.argsort(distances)[1:k+1]
-#         j= np.random.randint(0,k)
-#         nnchosen=df0.iloc[knn[j]]
-#         newrow=nodechosen + (nnchosen-nodechosen) * np.random.rand()
-#         newrow = pd.DataFrame([newrow])
-#         df0 = pd.concat([df0, newrow], axis=0)
-        
-#     return pd.concat([df0,df1],axis=0)
-
 def oversample_by_SMOTE(df: pd.DataFrame, objective_class: str = '', k : int = 2):
     _df : pd.DataFrame = df.copy()
     class_0 : pd.DataFrame = _df[df[objective_class] == 0]
