@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sb
 
 class LogisticRegression:
     def __init__(self, x : np.ndarray, b : np.ndarray, L2 : float = 0, initial_weight_value : float = 1):
@@ -121,6 +122,18 @@ class LogisticRegression:
         print("RECALL               : ", self.get_recall())
         print("FALSE POSITIVE RATE  : ", self.get_false_positive_rate())
         print("F-SCORE              : ", self.get_f_score())
+    
+    def plot_confusion_matrix(self) -> None:
+        tp, tn, fp, fn = self.get_confusion_matrix()
+        conf_matrix = np.array([[tp, fn],
+                                [fp, tn]])
+        conf_matrix_labels = ['Positive', 'Negative']
+        df_cm = pd.DataFrame(conf_matrix, index=conf_matrix_labels, columns=conf_matrix_labels)
+        sb.heatmap(df_cm, annot=True, fmt='d', cmap='Purples')
+        plt.title('Diagnosis Confusion Matrix')
+        plt.xlabel('Predicted')
+        plt.ylabel('Ground Truth')
+        plt.show()
         
 
     def get_roc_points(self, ground_truth : np.ndarray, k_points : int = 10) -> tuple[list[float], list[float]]:
