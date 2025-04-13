@@ -30,7 +30,7 @@ class LogisticRegression:
         attempts = 0
         # print(self.x.shape)
         while True:
-            gradient = self.gradiente_cross_entropy()
+            gradient = self.gradiente_cross_entropy_reweighted(minoritary_class_value)
             if (np.linalg.norm(gradient) <= tolerance and tolerance != -1) or (attempts >= max_number_of_steps and max_number_of_steps != -1):
                 break
             self.w = self.w - (step_size * (gradient))
