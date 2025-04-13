@@ -94,7 +94,7 @@ def oversample_by_SMOTE(df: pd.DataFrame, objective_class: str = '', k : int = 2
     new_samples : pd.DataFrame = minority.copy()
     for i in range(len(majority) - len(minority)):
         random_minority_sample : pd.DataFrame = minority.sample(n=1, random_state=42+i)
-        distances : np.ndarray[float] = np.linalg.norm(np.array(minority[numeric_columns].values, dtype=np.float64) - np.array(random_minority_sample[numeric_columns].values, dtype=np.float64), axis=1)
+        distances : np.ndarray[float] = np.linalg.norm(np.array(minority.values, dtype=np.float64) - np.array(random_minority_sample.values, dtype=np.float64), axis=1)
         knn_indeces : np.ndarray[int] = np.argsort(distances)[1:k+1]
         nearest_neighbor : pd.DataFrame = minority.iloc[knn_indeces[np.random.randint(0,k)]]
         new_numeric_values : np.ndarray = (
