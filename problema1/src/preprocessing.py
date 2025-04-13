@@ -16,15 +16,27 @@ def remove_na_rows(df : pd.DataFrame) -> pd.DataFrame:
 
 def fill_na_values(df : pd.DataFrame) -> pd.DataFrame:
     _df : pd.DataFrame = df.copy()
-    numeric_columns : pd.Series = _df.select_dtypes(include='number').columns
-    _df[numeric_columns] = _df[numeric_columns].clip(lower=0) # Me aseguro que no haya valores negativos
-    _df = _df.fillna(value=_df.median(numeric_only=True))
+    numeric_columns : pd.Index = _df.select_dtypes(include='number').columns
+    df_median : pd.Series = _df.median(numeric_only=True)
+    
+    # Seteo los valores negativos a 0. Luego limito los valores de ciertas features a su rango.
+    for col in numeric_columns:
+        _df.loc[_df[col] < 0, col] = df_median[col]
+    _df.loc[_df['CellAdhesion'] > 1, 'CellAdhesion'] = df_median['CellAdhesion']                            # CellAdhesion          -   Rango (0-1)
+    _df.loc[_df['NuclearMembrane'] < 1, 'NuclearMembrane'] = df_median['NuclearMembrane']                   # NuclearMembrane       -   Rango (1-5)
+    _df.loc[_df['NuclearMembrane'] > 5, 'NuclearMembrane'] = df_median['NuclearMembrane']   
+    _df.loc[_df['Vascularization'] < 0, 'Vascularization'] = df_median['Vascularization']                   # Vascularization       -   Rango (0-10)
+    _df.loc[_df['Vascularization'] > 10, 'Vascularization'] = df_median['Vascularization']                
+    _df.loc[_df['InflammationMarkers'] < 0, 'InflammationMarkers'] = df_median['InflammationMarkers']       # InflammationMarkers   -   Rango (0-100)
+    _df.loc[_df['InflammationMarkers'] > 100, 'InflammationMarkers'] = df_median['InflammationMarkers']   
+
+    _df = _df.fillna(value=df_median)
     _df['CellType'] = _df['CellType'].fillna('Unknown')
     return _df
 
 def standardize_numeric_columns(df : pd.DataFrame) -> pd.DataFrame:
     _df : pd.DataFrame = df.copy()
-    numeric_columns : pd.DataFrame = _df.select_dtypes(include=np.number).columns
+    numeric_columns : pd.Index = _df.select_dtypes(include=np.number).columns
     _df[numeric_columns] = (_df[numeric_columns] - _df[numeric_columns].mean()) / _df[numeric_columns].std()
     return _df
 
@@ -68,6 +80,9 @@ def oversample_by_SMOTE(df: pd.DataFrame, objective_class: str = '') -> pd.DataF
     class_0 : pd.DataFrame = _df[df[objective_class] == 0]
     class_1 : pd.DataFrame = _df[df[objective_class] == 1]
     minority : pd.DataFrame = class_1 if len(class_0) > len(class_1) else class_0
-    numeric_columns : list[str] = ['CellSize', 'CellShape', 'NucleusDensity', 'ChromatinTexture', 'CytoplasmSize', 'CellAdhesion', 'MitosisRate', 'NuclearMembrane', 'GrowthFactor', 'OxygenSaturation', 'Vascularization', 'InflammationMarkers']
-    boolean_columns : list[bool] = ['Diagnosis']
+    # numeric_columns : list[str] = ['CellSize', 'CellShape', 'NucleusDensity', 'ChromatinTexture', 'CytoplasmSize', 'CellAdhesion', 'MitosisRate', 'NuclearMembrane', 'GrowthFactor', 'OxygenSaturation', 'Vascularization', 'InflammationMarkers']
+    # boolean_columns : list[bool] = ['Diagnosis']
+    numeric_columns : pd.Index = df.select_dtypes(include=np.number).columns
+    boolean_columns : pd.Index = df.select_dtypes(include=bool).columns
+
     return pd.DataFrame()
