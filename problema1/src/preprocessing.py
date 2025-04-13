@@ -18,7 +18,7 @@ def fill_na_values(df : pd.DataFrame) -> pd.DataFrame:
     _df : pd.DataFrame = df.copy()
     numeric_columns : pd.Index = _df.select_dtypes(include='number').columns
     df_median : pd.Series = _df.median(numeric_only=True)
-    
+
     # Seteo los valores negativos a 0. Luego limito los valores de ciertas features a su rango.
     for col in numeric_columns:
         _df.loc[_df[col] < 0, col] = df_median[col]
@@ -71,7 +71,7 @@ def oversample_by_duplication(df: pd.DataFrame, objective_class: str = '') -> pd
     majority : pd.DataFrame = class_0 if len(class_0) > len(class_1) else class_1
     minority : pd.DataFrame = class_1 if len(class_0) > len(class_1) else class_0
     minority_sampled : pd.DataFrame = minority.sample(len(majority) - len(minority), replace=True, random_state=42) # replace=True permite samplear una fila mas de una vez
-    minority.info(verbose=False)
+    # minority.info(verbose=False)
     # print(minority_sampled)
     return pd.concat([minority, minority_sampled, majority]).sample(frac=1) # shuffleo
 
