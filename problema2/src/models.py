@@ -99,7 +99,7 @@ class LogisticRegression:
         conf_matrix_labels = ['Positive', 'Negative']
         df_cm = pd.DataFrame(conf_matrix, index=conf_matrix_labels, columns=conf_matrix_labels)
         sb.heatmap(df_cm, annot=True, fmt='d', cmap='Purples')
-        plt.title('Diagnosis Confusion Matrix')
+        plt.title('War Class Confusion Matrix')
         plt.xlabel('Predicted')
         plt.ylabel('Ground Truth')
         plt.show()

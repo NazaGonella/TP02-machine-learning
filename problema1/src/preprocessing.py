@@ -1,13 +1,5 @@
 import pandas as pd
 import numpy as np
-# import os
-
-# project_root = os.path.abspath(os.path.join(os.getcwd(), ".."))
-
-# cell_diagnosis_dev : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema1/data/raw/cell_diagnosis_dev.csv')
-# cell_diagnosis_dev_imbalanced : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema1/data/raw/cell_diagnosis_dev_imbalanced.csv')
-# cell_diagnosis_test : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema1/data/raw/cell_diagnosis_test.csv')
-# cell_diagnosis_test_imbalanced : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema1/data/raw/cell_diagnosis_test_imbalanced.csv')
 
 def correct_data_types(df : pd.DataFrame) -> pd.DataFrame:
     _df : pd.DataFrame = df.copy()
@@ -60,7 +52,7 @@ def process_and_stardardize(df : pd.DataFrame, filename : str = "", save_path : 
     df_processed_and_standardized : pd.DataFrame = standardize_numeric_columns(df_processed)
     if save_path and filename:
         df_processed.to_csv(f'{save_path}/{filename}_processed.csv', index=False)
-        df_processed_and_standardized.to_csv(f'{save_path}/{filename}_processed_and_standardized.csv')
+        df_processed_and_standardized.to_csv(f'{save_path}/{filename}_processed_and_standardized.csv', index=False)
     return df_processed_and_standardized
 
 def undersample(df: pd.DataFrame, objective_class: str = '') -> pd.DataFrame:
@@ -108,19 +100,3 @@ def oversample_by_SMOTE(df: pd.DataFrame, objective_class: str = '', k : int = 2
         new_samples = pd.concat([new_samples, new_sample], axis=0)
     minority = pd.concat([minority, new_samples], axis=0)
     return pd.concat([minority, majority],axis=0)
-
-# # Realizo el rebalanceo con el dataset preprocesado
-# cell_diagnosis_dev_imbalanced_processed_and_standardized : pd.DataFrame = process_and_stardardize(
-#     cell_diagnosis_dev_imbalanced, 
-#     filename='cell_diagnosis_dev_imbalanced', 
-#     save_path=f'{project_root}/TP02/problema1/data/processed/'
-# )
-# # print("---------------------------------------------------------------")
-# # print("OVERSAMPLING MEDIANTE SMOTE")
-# # print("---------------------------------------------------------------")
-# # print(cell_diagnosis_dev_imbalanced_processed_and_standardized.info())
-# cell_diagnosis_dev_oversampled_by_SMOTE : pd.DataFrame = oversample_by_SMOTE(cell_diagnosis_dev_imbalanced_processed_and_standardized, objective_class='Diagnosis', k=2)
-# # print(cell_diagnosis_dev_oversampled_by_SMOTE.info())
-# for col in ['Diagnosis', 'GeneticMutation', 'CellType_Epthlial', 'CellType_Mesnchymal', 'CellType_Unknown']:
-#     print(f"{col}: {cell_diagnosis_dev_oversampled_by_SMOTE[col].unique()}")
-# print(cell_diagnosis_dev_oversampled_by_SMOTE.info())

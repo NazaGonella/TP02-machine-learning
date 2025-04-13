@@ -40,5 +40,5 @@ def process_and_stardardize(df : pd.DataFrame, filename : str = "", save_path : 
     df_processed_and_standardized : pd.DataFrame = standardize_numeric_columns(df_processed)
     if save_path and filename:
         df_processed.to_csv(f'{save_path}/{filename}_processed.csv', index=False)
-        df_processed_and_standardized.to_csv(f'{save_path}/{filename}_processed_and_standardized.csv')
+        df_processed_and_standardized.to_csv(f'{save_path}/{filename}_processed_and_standardized.csv', index=False)
     return df_processed_and_standardized
