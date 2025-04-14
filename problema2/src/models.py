@@ -150,6 +150,10 @@ class LinearDiscriminantAnalysis:
         self.fitted: bool = False
         self.pred_labels: np.ndarray = np.array([])
         self.scores: np.ndarray = np.array([])
+        # self.metrics_per_class : dict[int, tuple[int, int, int, int]] = {c : (0,0,0,0) for c in self.classes}
+        self.metrics_from_predict: dict[int, tuple[int, int, int, int]] = {c : (0,0,0,0) for c in self.classes}
+        self.metrics_from_threshold: dict[int, tuple[int, int, int, int]] = {c : (0,0,0,0) for c in self.classes}
+
 
     def fit(self) -> None:
         n_samples, n_features = self.x.shape
@@ -169,6 +173,7 @@ class LinearDiscriminantAnalysis:
         mu = self.means[c]
         prior = self.priors[c]
         return float(x @ self.inv_covariance @ mu.T - 0.5 * mu.T @ self.inv_covariance @ mu + np.log(prior))
+
 
     # def predict(self, input: np.ndarray) -> None:
     #     input = np.array(input, dtype=np.float64)
@@ -190,10 +195,24 @@ class LinearDiscriminantAnalysis:
         self.pred_labels = np.array(pred, dtype=np.int32)
         self.scores = np.array(all_scores)  # array de diccionarios de scores
 
-    def evaluate(self, ground_truth: np.ndarray) -> float:
+    def evaluate(self, ground_truth: np.ndarray) -> None:
         if self.pred_labels.size == 0:
             raise RuntimeError("Debe ejecutar predict() antes de evaluar.")
-        return np.mean(self.pred_labels == ground_truth)
+        
+        for c in self.classes:
+            y_true = (ground_truth == c).astype(int)
+            y_pred = (self.pred_labels == c).astype(int)
+
+            TP = np.sum((y_pred == 1) & (y_true == 1))
+            TN = np.sum((y_pred == 0) & (y_true == 0))
+            FP = np.sum((y_pred == 1) & (y_true == 0))
+            FN = np.sum((y_pred == 0) & (y_true == 1))
+            self.metrics_from_predict[c] = (TP, TN, FP, FN)
+
+    # def evaluate(self, ground_truth: np.ndarray) -> float:
+    #     if self.pred_labels.size == 0:
+    #         raise RuntimeError("Debe ejecutar predict() antes de evaluar.")
+    #     return np.mean(self.pred_labels == ground_truth)
     # def evaluate(self, ground_truth: np.ndarray, class_label: int, threshold: float) -> float:
     #     if self.scores.size == 0:
     #         raise RuntimeError("Debe ejecutar predict() antes de evaluar con umbral.")
@@ -203,20 +222,20 @@ class LinearDiscriminantAnalysis:
     #     y_pred = (y_scores >= threshold).astype(int)
 
     #     return np.mean(y_pred == y_true)
-    def evaluate(self, ground_truth: np.ndarray, class_label: int, threshold: float) -> tuple[int, int, int, int]:
-    if self.scores.size == 0:
-        raise RuntimeError("Debe ejecutar predict() antes de evaluar con umbral.")
+    def evaluate_threshold(self, ground_truth: np.ndarray, threshold: float):
+        if self.scores.size == 0:
+            raise RuntimeError("Debe ejecutar predict() antes de evaluar con umbral.")
 
-    y_true = (ground_truth == class_label).astype(int)
-    y_scores = np.array([score[class_label] for score in self.scores])
-    y_pred = (y_scores >= threshold).astype(int)
+        for c in self.classes:
+            y_true = (ground_truth == c).astype(int)
+            y_scores = np.array([score[c] for score in self.scores])
+            y_pred = (y_scores >= threshold).astype(int)
 
-    TP = np.sum((y_pred == 1) & (y_true == 1))
-    TN = np.sum((y_pred == 0) & (y_true == 0))
-    FP = np.sum((y_pred == 1) & (y_true == 0))
-    FN = np.sum((y_pred == 0) & (y_true == 1))
-
-    return TP, TN, FP, FN
+            TP = np.sum((y_pred == 1) & (y_true == 1))
+            TN = np.sum((y_pred == 0) & (y_true == 0))
+            FP = np.sum((y_pred == 1) & (y_true == 0))
+            FN = np.sum((y_pred == 0) & (y_true == 1))
+            self.metrics_from_threshold[c] = (TP, TN, FP, FN)
 
     def get_confusion_matrix(self, ground_truth: np.ndarray) -> np.ndarray:
         if self.pred_labels.size == 0:
@@ -233,68 +252,72 @@ class LinearDiscriminantAnalysis:
 
         return matrix
 
-    def get_precision(self, conf_matrix: np.ndarray, class_label: int) -> float:
-        if class_label not in self.classes:
-            raise ValueError(f"Clase {class_label} no encontrada en los datos.")
+    def get_precision(self, conf_matrix: np.ndarray, class_label: int, from_threshold : bool = True) -> float:
+        # if class_label not in self.classes:
+        #     raise ValueError(f"Clase {class_label} no encontrada en los datos.")
         
-        idx = np.where(self.classes == class_label)[0][0]
-        TP = conf_matrix[idx, idx]
-        FP = np.sum(conf_matrix[:, idx]) - TP
+        # idx = np.where(self.classes == class_label)[0][0]
+        # TP = conf_matrix[idx, idx]
+        # FP = np.sum(conf_matrix[:, idx]) - TP
+        TP = self.metrics_from_threshold[class_label][0] if from_threshold else self.metrics_from_predict[class_label][0]
+        FP = self.metrics_from_threshold[class_label][2] if from_threshold else self.metrics_from_predict[class_label][2]
         return TP / (TP + FP) if (TP + FP) > 0 else 0.0
 
-    def get_recall(self, conf_matrix: np.ndarray, class_label: int) -> float:
-        if class_label not in self.classes:
-            raise ValueError(f"Clase {class_label} no encontrada en los datos.")
+    def get_recall(self, conf_matrix: np.ndarray, class_label: int, from_threshold : bool = True) -> float:
+        # if class_label not in self.classes:
+        #     raise ValueError(f"Clase {class_label} no encontrada en los datos.")
         
-        idx = np.where(self.classes == class_label)[0][0]
-        TP = conf_matrix[idx, idx]
-        FN = np.sum(conf_matrix[idx, :]) - TP
+        # idx = np.where(self.classes == class_label)[0][0]
+        # TP = conf_matrix[idx, idx]
+        # FN = np.sum(conf_matrix[idx, :]) - TP
+        TP = self.metrics_from_threshold[class_label][0] if from_threshold else self.metrics_from_predict[class_label][0]
+        FN = self.metrics_from_threshold[class_label][3] if from_threshold else self.metrics_from_predict[class_label][3]
         return TP / (TP + FN) if (TP + FN) > 0 else 0.0
     
-    def get_f_score(self, conf_matrix: np.ndarray, class_label : int) -> np.ndarray:
-        precision = self.get_precision(conf_matrix, class_label=class_label)
-        recall = self.get_recall(conf_matrix, class_label=class_label)
+    def get_f_score(self, conf_matrix: np.ndarray, class_label : int, from_threshold : bool = True) -> np.ndarray:
+        precision = self.get_precision(conf_matrix, class_label=class_label, from_threshold=from_threshold)
+        recall = self.get_recall(conf_matrix, class_label=class_label, from_threshold=from_threshold)
         return 2 * (precision * recall) / (precision + recall)
     
-    def get_roc_points(self, ground_truth : np.ndarray, class_label : int, k_points : int = 10) -> tuple[list[float], list[float]]:
-        recalls : list[float] = []
-        precisions : list[float] = []
-        for threshold in np.linspace(0, 1, k_points):
-            self.evaluate(ground_truth, threshold=threshold)
-            recalls.append(self.get_recall(conf_matrix=self.get_confusion_matrix(ground_truth=ground_truth), class_label=class_label))
-            precisions.append(self.get_precision(conf_matrix=self.get_confusion_matrix(ground_truth=ground_truth), class_label=class_label))
-        return (recalls, precisions)
+    # def get_roc_points(self, ground_truth : np.ndarray, class_label : int, k_points : int = 10) -> tuple[list[float], list[float]]:
+    #     recalls : list[float] = []
+    #     precisions : list[float] = []
+    #     for threshold in np.linspace(0, 1, k_points):
+    #         self.evaluate(ground_truth, threshold=threshold)
+    #         recalls.append(self.get_recall(conf_matrix=self.get_confusion_matrix(ground_truth=ground_truth), class_label=class_label))
+    #         precisions.append(self.get_precision(conf_matrix=self.get_confusion_matrix(ground_truth=ground_truth), class_label=class_label))
+    #     return (recalls, precisions)
 
-    def get_pr_points(self, ground_truth : np.ndarray, k_points : int = 10) -> tuple[list[float], list[float]]:
-        original_tp : int = self.tp
-        original_tn : int = self.tn
-        original_fp : int = self.fp
-        original_fn : int = self.fn
-        trues_positives_rateses : list[float] = []
-        falses_positives_rateses : list[float] = []
-        for threshold in np.linspace(0, 1, k_points):
-            self.evaluate(ground_truth, threshold=threshold)
-            trues_positives_rateses.append(self.get_recall())
-            falses_positives_rateses.append(self.get_false_positive_rate())
-        self.tp : int = original_tp
-        self.tn : int = original_tn
-        self.fp : int = original_fp
-        self.fn : int = original_fn
-        return (falses_positives_rateses, trues_positives_rateses)
+    # def get_pr_points(self, ground_truth : np.ndarray, k_points : int = 10) -> tuple[list[float], list[float]]:
+    #     original_tp : int = self.tp
+    #     original_tn : int = self.tn
+    #     original_fp : int = self.fp
+    #     original_fn : int = self.fn
+    #     trues_positives_rateses : list[float] = []
+    #     falses_positives_rateses : list[float] = []
+    #     for threshold in np.linspace(0, 1, k_points):
+    #         self.evaluate(ground_truth, threshold=threshold)
+    #         trues_positives_rateses.append(self.get_recall())
+    #         falses_positives_rateses.append(self.get_false_positive_rate())
+    #     self.tp : int = original_tp
+    #     self.tn : int = original_tn
+    #     self.fp : int = original_fp
+    #     self.fn : int = original_fn
+    #     return (falses_positives_rateses, trues_positives_rateses)
     
     def print_metrics(self, ground_truth: np.ndarray) -> None:
         if self.pred_labels.size == 0:
             raise RuntimeError("Debe ejecutar predict() antes de evaluar.")
         conf_matrix = self.get_confusion_matrix(ground_truth)
-        accuracy = self.evaluate(ground_truth)
+        # accuracy = self.evaluate(ground_truth)
         print("Confusion Matrix:")
         print(conf_matrix)
-        print("\nTotal Accuracy: {:.4f}".format(accuracy))        
+        # print("\nTotal Accuracy: {:.4f}".format(accuracy))        
         for label in self.classes:
             print(f"\nClass {label}:")
-            print(f"Precision: {self.get_precision(conf_matrix=conf_matrix, class_label=label):.4f}")
-            print(f"Recall: {self.get_recall(conf_matrix=conf_matrix, class_label=label):.4f}")
-            print(f"F-Score: {self.get_f_score(conf_matrix=conf_matrix, class_label=label):.4f}")
+            print(f"Precision: {self.get_precision(conf_matrix=conf_matrix, class_label=label, from_threshold=False):.4f}")
+            print(f"Recall: {self.get_recall(conf_matrix=conf_matrix, class_label=label, from_threshold=False):.4f}")
+            print(f"F-Score: {self.get_f_score(conf_matrix=conf_matrix, class_label=label, from_threshold=False):.4f}")
     
     def plot_confusion_matrix(self, conf_matrix) -> None:
         # Plotting the confusion matrix using seaborn heatmap
@@ -335,7 +358,9 @@ if __name__ == "__main__":
     lda = LinearDiscriminantAnalysis(train.drop(columns=['war_class']).to_numpy(), train['war_class'].to_numpy())
     lda.fit()
     lda.predict(validation.drop(columns=['war_class']).to_numpy())
-    accuracy = lda.evaluate(validation["war_class"].to_numpy())
+    # accuracy = lda.evaluate(validation["war_class"].to_numpy())
+    lda.evaluate(validation['war_class'].to_numpy())
+    lda.evaluate_threshold(validation['war_class'].to_numpy(), threshold=0.5)
     conf_matrix = lda.get_confusion_matrix(validation["war_class"].to_numpy())
     lda.print_metrics(validation["war_class"].to_numpy())
     lda.plot_confusion_matrix(conf_matrix)
