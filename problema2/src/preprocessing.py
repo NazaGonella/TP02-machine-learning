@@ -4,7 +4,7 @@ import numpy as np
 def correct_data_types(df : pd.DataFrame) -> pd.DataFrame:
     _df : pd.DataFrame = df.copy()
     _df = _df.convert_dtypes()
-    _df['war_class'] = _df['war_class'].astype(str)
+    _df['war_class'] = _df['war_class'].astype(np.float64)
     return _df
 
 def remove_na_rows(df : pd.DataFrame) -> pd.DataFrame:
@@ -24,7 +24,7 @@ def fill_na_values(df : pd.DataFrame) -> pd.DataFrame:
 
 def standardize_numeric_columns(df : pd.DataFrame) -> pd.DataFrame:
     _df : pd.DataFrame = df.copy()
-    numeric_columns : pd.Index = _df.select_dtypes(include=np.number).columns
+    numeric_columns : pd.Index = _df.select_dtypes(include=np.number).drop(columns=['war_class']).columns
     _df[numeric_columns] = (_df[numeric_columns] - _df[numeric_columns].mean()) / _df[numeric_columns].std()
     return _df
 
@@ -36,7 +36,7 @@ def process_and_stardardize(df : pd.DataFrame, filename : str = "", save_path : 
     _df : pd.DataFrame = df.copy()
     df_processed : pd.DataFrame = correct_data_types(_df)
     df_processed = fill_na_values(df_processed)
-    df_processed = one_hot_encoding(df_processed, 'war_class')
+    # df_processed = one_hot_encoding(df_processed, 'war_class')
     df_processed_and_standardized : pd.DataFrame = standardize_numeric_columns(df_processed)
     if save_path and filename:
         df_processed.to_csv(f'{save_path}/{filename}_processed.csv', index=False)

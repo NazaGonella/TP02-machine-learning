@@ -140,83 +140,94 @@ class LogisticRegression:
         return (falses_positives_rateses, trues_positives_rateses)
 
 class LDA:
-    def __init__(self, x: np.ndarray, b: np.ndarray, n_components: int = 1):
-        self.x : np.ndarray = np.array(x, dtype=np.float64)
-        self.b : np.ndarray = np.array(b, dtype=np.int32)
-        self.n_components : int = n_components
+    def __init__(self, n_components):
+        self.n_components = n_components
         self.linear_discriminants = None
-        self.projected = None
-        self.pred = None
-        self.tp = self.tn = self.fp = self.fn = 0
 
-    def fit(self):
-        n_features = self.x.shape[1]
-        class_labels = np.unique(self.b)
-        means = np.mean(self.x, axis=0)
+    def fit(self, X, y):
+        n_features = X.shape[1]
+        class_labels = np.unique(y)
+
+        # Within class scatter matrix:
+        # SW = sum((X_c - mean_X_c)^2 )
+
+        # Between class scatter:
+        # SB = sum( n_c * (mean_X_c - mean_overall)^2 )
+
+        mean_overall = np.mean(X, axis=0)
         SW = np.zeros((n_features, n_features))
         SB = np.zeros((n_features, n_features))
         for c in class_labels:
-            X_c = self.x[self.b == c]
-            mean_c = np.mean(X_c, axis=0)
-            SW += (X_c - mean_c).T.dot((X_c - mean_c))  # sumo matriz de covarianza
+            X_c = np.array(X[y == c], dtype=np.float64)
+            mean_c = np.array(np.mean(X_c, axis=0), dtype=np.float64)
+            # (4, n_c) * (n_c, 4) = (4,4) -> transpose
+            SW += (X_c - mean_c).T.dot((X_c - mean_c))
+
+            # (4, 1) * (1, 4) = (4,4) -> reshape
             n_c = X_c.shape[0]
-            mean_diff = (mean_c - means).reshape(n_features, 1)
-            SB += n_c * mean_diff.dot(mean_diff.T)
+            mean_diff = (mean_c - mean_overall).reshape(n_features, 1).astype(np.float64)
+            SB += n_c * (mean_diff).dot(mean_diff.T)
+
+        # Determine SW^-1 * SB
         A = np.linalg.inv(SW).dot(SB)
+        # Get eigenvalues and eigenvectors of SW^-1 * SB
         eigenvalues, eigenvectors = np.linalg.eig(A)
+        # -> eigenvector v = [:,i] column vector, transpose for easier calculations
+        # sort eigenvalues high to low
         eigenvectors = eigenvectors.T
         idxs = np.argsort(abs(eigenvalues))[::-1]
-        self.linear_discriminants = eigenvectors[idxs][:self.n_components]
+        eigenvalues = eigenvalues[idxs]
+        eigenvectors = eigenvectors[idxs]
+        # store first n eigenvectors
+        self.linear_discriminants = eigenvectors[0 : self.n_components]
 
-    def project(self):
-        self.projected = self.x @ self.linear_discriminants.T
+    def transform(self, X):
+        # project data
+        return np.dot(X, self.linear_discriminants.T)
 
-    # def predict(self):
-    #     means = []
-    #     for c in np.unique(self.b):
-    #         means.append(np.mean(self.projected[self.b == c]))
-    #     threshold = np.mean(means)
-    #     self.pred = (self.projected > threshold).astype(int).flatten()
 
-    def predict(self):
-        class_labels = np.unique(self.b)
-        # Calculo el centroide proyectado de cada clase
-        means = {
-            c: np.mean(self.projected[self.b == c], axis=0)
-            for c in class_labels
-        }
-        # Clasifico por cercanía al centroide
-        self.pred = np.array([
-            min(means, key=lambda c: np.linalg.norm(p - means[c]))
-            for p in self.projected
-        ])
+# Testing
+if __name__ == "__main__":
+    # Imports
+    import pandas as pd
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import seaborn as sb
+    import os
+    import preprocessing as prepro
+    from IPython.display import display
 
-    def evaluate(self):
-        self.tp = np.sum((self.pred == 1) & (self.b == 1))
-        self.tn = np.sum((self.pred == 0) & (self.b == 0))
-        self.fp = np.sum((self.pred == 1) & (self.b == 0))
-        self.fn = np.sum((self.pred == 0) & (self.b == 1))
+    project_root = os.path.abspath(os.path.join(os.getcwd(), ".."))
 
-    def get_confusion_matrix(self):
-        return (self.tp, self.tn, self.fp, self.fn)
+    war_class_dev : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_dev.csv')
+    war_class_test : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_test.csv')
 
-    def get_accuracy(self):
-        total = self.tp + self.tn + self.fp + self.fn
-        return (self.tp + self.tn) / total if total != 0 else 0.0
+    war_class_dev_processed_and_standardized : pd.DataFrame = prepro.process_and_stardardize(
+        war_class_dev, 
+        filename='war_class_dev', 
+        save_path=f'{project_root}/TP02/problema2/data/processed/'
+    )
+    X, y = war_class_dev_processed_and_standardized.drop(columns=['war_class']).to_numpy(), war_class_dev_processed_and_standardized[['war_class']].to_numpy().flatten()
+    display(war_class_dev_processed_and_standardized.info())
+    print(X.shape)
+    print("")
+    print(y.shape)
 
-    def get_precision(self):
-        return self.tp / (self.tp + self.fp) if (self.tp + self.fp) != 0 else 0.0
+    # Project the data onto the 2 primary linear discriminants
+    lda = LDA(2)
+    lda.fit(X, y)
+    X_projected = lda.transform(X)
 
-    def get_recall(self):
-        return self.tp / (self.tp + self.fn) if (self.tp + self.fn) != 0 else 0.0
+    print("Shape of X:", X.shape)
+    print("Shape of transformed X:", X_projected.shape)
 
-    def get_f_score(self):
-        precision = self.get_precision()
-        recall = self.get_recall()
-        return 2 * precision * recall / (precision + recall) if (precision + recall) != 0 else 0.0
+    x1, x2 = X_projected[:, 0], X_projected[:, 1]
 
-    def print_metrics(self):
-        print("ACCURACY   :", self.get_accuracy())
-        print("PRECISION  :", self.get_precision())
-        print("RECALL     :", self.get_recall())
-        print("F-SCORE    :", self.get_f_score())
+    plt.scatter(
+        x1, x2, c=y, edgecolor="none", alpha=0.8, cmap=plt.cm.get_cmap("viridis", 3)
+    )
+
+    plt.xlabel("Linear Discriminant 1")
+    plt.ylabel("Linear Discriminant 2")
+    plt.colorbar()
+    plt.show()
