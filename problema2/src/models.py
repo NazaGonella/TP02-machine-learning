@@ -271,10 +271,10 @@ class LinearDiscriminantAnalysis:
             print(f"Precision: {self.get_precision(class_label=label, from_threshold=False):.4f}")
             print(f"Recall: {self.get_recall(class_label=label, from_threshold=False):.4f}")
             print(f"F-Score: {self.get_f_score(class_label=label, from_threshold=False):.4f}")
-            recalls, precisions = self.get_roc_points(validation["war_class"].to_numpy(), label, 20)
+            recalls, precisions = self.get_roc_points(ground_truth, label, 20)
             sorted_x : np.ndarray[float] = np.sort(recalls)
             sorted_y : np.ndarray[float] = np.sort(precisions)
-            falses_positives_rateses, trues_positives_rateses = self.get_pr_points(validation["war_class"].to_numpy(), label, 20)
+            falses_positives_rateses, trues_positives_rateses = self.get_pr_points(ground_truth, label, 20)
             print(f"AUC-ROC: {np.trapz(y=recalls, x=precisions):.4f}")
             sorted_x = np.sort(falses_positives_rateses)
             sorted_y = np.sort(trues_positives_rateses)
@@ -289,9 +289,9 @@ class LinearDiscriminantAnalysis:
         plt.ylabel("True")
         plt.show()
 
-    def plot_roc_curve(self) -> None:
+    def plot_roc_curve(self, ground_truth) -> None:
         for c in self.classes:
-            recalls, precisions = self.get_roc_points(validation["war_class"].to_numpy(), c, 20)
+            recalls, precisions = self.get_roc_points(ground_truth, c, 20)
             plt.plot(recalls, precisions, label=f'Class {c}')
         plt.title("ROC")
         plt.grid(visible=True, alpha=0.5)
@@ -300,9 +300,9 @@ class LinearDiscriminantAnalysis:
         plt.legend()
         plt.show()
 
-    def plot_pr_curve(self) -> None:
+    def plot_pr_curve(self, ground_truth) -> None:
         for c in self.classes:
-            falses_positives_rateses, trues_positives_rateses = self.get_pr_points(validation["war_class"].to_numpy(), c, 20)
+            falses_positives_rateses, trues_positives_rateses = self.get_pr_points(ground_truth, c, 20)
             plt.plot(falses_positives_rateses, trues_positives_rateses, label=f'Class {c}')
         plt.title("Precision-Recall (PR)")
         plt.grid(visible=True, alpha=0.5)
