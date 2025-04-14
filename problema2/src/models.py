@@ -104,7 +104,6 @@ class LogisticRegression:
         plt.ylabel('Ground Truth')
         plt.show()
         
-
     def get_roc_points(self, ground_truth : np.ndarray, k_points : int = 10) -> tuple[list[float], list[float]]:
         original_tp : int = self.tp
         original_tn : int = self.tn
@@ -150,6 +149,7 @@ class LinearDiscriminantAnalysis:
         self.inv_covariance: np.ndarray = np.array([])
         self.fitted: bool = False
         self.pred_labels: np.ndarray = np.array([])
+        self.scores: np.ndarray = np.array([])
 
     def fit(self) -> None:
         n_samples, n_features = self.x.shape
@@ -170,18 +170,53 @@ class LinearDiscriminantAnalysis:
         prior = self.priors[c]
         return float(x @ self.inv_covariance @ mu.T - 0.5 * mu.T @ self.inv_covariance @ mu + np.log(prior))
 
+    # def predict(self, input: np.ndarray) -> None:
+    #     input = np.array(input, dtype=np.float64)
+    #     pred = []
+    #     for x_i in input:
+    #         scores = {c: self._discriminant_function(x_i, c) for c in self.classes}
+    #         pred.append(max(scores, key=scores.get))
+    #     self.pred_labels = np.array(pred, dtype=np.int32)
     def predict(self, input: np.ndarray) -> None:
         input = np.array(input, dtype=np.float64)
         pred = []
+        all_scores = []
+
         for x_i in input:
             scores = {c: self._discriminant_function(x_i, c) for c in self.classes}
+            all_scores.append(scores)
             pred.append(max(scores, key=scores.get))
+
         self.pred_labels = np.array(pred, dtype=np.int32)
+        self.scores = np.array(all_scores)  # array de diccionarios de scores
 
     def evaluate(self, ground_truth: np.ndarray) -> float:
         if self.pred_labels.size == 0:
             raise RuntimeError("Debe ejecutar predict() antes de evaluar.")
         return np.mean(self.pred_labels == ground_truth)
+    # def evaluate(self, ground_truth: np.ndarray, class_label: int, threshold: float) -> float:
+    #     if self.scores.size == 0:
+    #         raise RuntimeError("Debe ejecutar predict() antes de evaluar con umbral.")
+
+    #     y_true = (ground_truth == class_label).astype(int)
+    #     y_scores = np.array([score[class_label] for score in self.scores])
+    #     y_pred = (y_scores >= threshold).astype(int)
+
+    #     return np.mean(y_pred == y_true)
+    def evaluate(self, ground_truth: np.ndarray, class_label: int, threshold: float) -> tuple[int, int, int, int]:
+    if self.scores.size == 0:
+        raise RuntimeError("Debe ejecutar predict() antes de evaluar con umbral.")
+
+    y_true = (ground_truth == class_label).astype(int)
+    y_scores = np.array([score[class_label] for score in self.scores])
+    y_pred = (y_scores >= threshold).astype(int)
+
+    TP = np.sum((y_pred == 1) & (y_true == 1))
+    TN = np.sum((y_pred == 0) & (y_true == 0))
+    FP = np.sum((y_pred == 1) & (y_true == 0))
+    FN = np.sum((y_pred == 0) & (y_true == 1))
+
+    return TP, TN, FP, FN
 
     def get_confusion_matrix(self, ground_truth: np.ndarray) -> np.ndarray:
         if self.pred_labels.size == 0:
@@ -221,38 +256,45 @@ class LinearDiscriminantAnalysis:
         recall = self.get_recall(conf_matrix, class_label=class_label)
         return 2 * (precision * recall) / (precision + recall)
     
-    
+    def get_roc_points(self, ground_truth : np.ndarray, class_label : int, k_points : int = 10) -> tuple[list[float], list[float]]:
+        recalls : list[float] = []
+        precisions : list[float] = []
+        for threshold in np.linspace(0, 1, k_points):
+            self.evaluate(ground_truth, threshold=threshold)
+            recalls.append(self.get_recall(conf_matrix=self.get_confusion_matrix(ground_truth=ground_truth), class_label=class_label))
+            precisions.append(self.get_precision(conf_matrix=self.get_confusion_matrix(ground_truth=ground_truth), class_label=class_label))
+        return (recalls, precisions)
+
+    def get_pr_points(self, ground_truth : np.ndarray, k_points : int = 10) -> tuple[list[float], list[float]]:
+        original_tp : int = self.tp
+        original_tn : int = self.tn
+        original_fp : int = self.fp
+        original_fn : int = self.fn
+        trues_positives_rateses : list[float] = []
+        falses_positives_rateses : list[float] = []
+        for threshold in np.linspace(0, 1, k_points):
+            self.evaluate(ground_truth, threshold=threshold)
+            trues_positives_rateses.append(self.get_recall())
+            falses_positives_rateses.append(self.get_false_positive_rate())
+        self.tp : int = original_tp
+        self.tn : int = original_tn
+        self.fp : int = original_fp
+        self.fn : int = original_fn
+        return (falses_positives_rateses, trues_positives_rateses)
     
     def print_metrics(self, ground_truth: np.ndarray) -> None:
         if self.pred_labels.size == 0:
             raise RuntimeError("Debe ejecutar predict() antes de evaluar.")
-        
-        # Get the confusion matrix
         conf_matrix = self.get_confusion_matrix(ground_truth)
-
-        # Calculate precision, recall, and F-score
-        # precision = self.get_precision(conf_matrix)
-        # recall = self.get_recall(conf_matrix)
-        # f_score = self.get_f_score(conf_matrix)
-        
-        # Calculate accuracy
         accuracy = self.evaluate(ground_truth)
-
-        # Print the metrics
         print("Confusion Matrix:")
         print(conf_matrix)
-        print("\nAccuracy: {:.4f}".format(accuracy))
-        
-        for i, class_label in enumerate(self.classes):
-            print(f"\nClass {class_label}:")
-            # print(f"  Precision: {precision[i]:.4f}")
-            print(f"Precision: {self.get_precision(conf_matrix=conf_matrix, class_label=i+1):.4f}")
-            # print(f"  Recall: {recall[i]:.4f}")
-            print(f"Recall: {self.get_recall(conf_matrix=conf_matrix, class_label=i+1):.4f}")
-            # print(f"  F-Score: {f_score[i]:.4f}")
-            print(f"F-Score: {self.get_f_score(conf_matrix=conf_matrix, class_label=i+1):.4f}")
-        
-        # You can add other metrics here, like AUC-ROC, AUC-PR, etc., if needed
+        print("\nTotal Accuracy: {:.4f}".format(accuracy))        
+        for label in self.classes:
+            print(f"\nClass {label}:")
+            print(f"Precision: {self.get_precision(conf_matrix=conf_matrix, class_label=label):.4f}")
+            print(f"Recall: {self.get_recall(conf_matrix=conf_matrix, class_label=label):.4f}")
+            print(f"F-Score: {self.get_f_score(conf_matrix=conf_matrix, class_label=label):.4f}")
     
     def plot_confusion_matrix(self, conf_matrix) -> None:
         # Plotting the confusion matrix using seaborn heatmap
