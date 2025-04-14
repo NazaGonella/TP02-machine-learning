@@ -195,7 +195,7 @@ class LinearDiscriminantAnalysis:
         self.pred_labels = np.array(pred, dtype=np.int32)
         self.scores = np.array(all_scores)  # array de diccionarios de scores
 
-    def evaluate(self, ground_truth: np.ndarray) -> None:
+    def evaluate(self, ground_truth: np.ndarray) -> float:
         if self.pred_labels.size == 0:
             raise RuntimeError("Debe ejecutar predict() antes de evaluar.")
         
@@ -208,6 +208,7 @@ class LinearDiscriminantAnalysis:
             FP = np.sum((y_pred == 1) & (y_true == 0))
             FN = np.sum((y_pred == 0) & (y_true == 1))
             self.metrics_from_predict[c] = (TP, TN, FP, FN)
+        return np.mean(self.pred_labels == ground_truth)
 
     # def evaluate(self, ground_truth: np.ndarray) -> float:
     #     if self.pred_labels.size == 0:
@@ -251,25 +252,20 @@ class LinearDiscriminantAnalysis:
             matrix[i][j] += 1
 
         return matrix
+    
+    def get_accuracy(self, class_label: int, from_threshold : bool = True) -> float:
+        TP = self.metrics_from_threshold[class_label][0] if from_threshold else self.metrics_from_predict[class_label][0]
+        TN = self.metrics_from_threshold[class_label][1] if from_threshold else self.metrics_from_predict[class_label][1]
+        FP = self.metrics_from_threshold[class_label][2] if from_threshold else self.metrics_from_predict[class_label][2]
+        FN = self.metrics_from_threshold[class_label][3] if from_threshold else self.metrics_from_predict[class_label][3]
+        return (TP + TN) / (TP + TN + FP + FN) if (TP + TN + FP + FN) > 0 else 0.0
 
     def get_precision(self, conf_matrix: np.ndarray, class_label: int, from_threshold : bool = True) -> float:
-        # if class_label not in self.classes:
-        #     raise ValueError(f"Clase {class_label} no encontrada en los datos.")
-        
-        # idx = np.where(self.classes == class_label)[0][0]
-        # TP = conf_matrix[idx, idx]
-        # FP = np.sum(conf_matrix[:, idx]) - TP
         TP = self.metrics_from_threshold[class_label][0] if from_threshold else self.metrics_from_predict[class_label][0]
         FP = self.metrics_from_threshold[class_label][2] if from_threshold else self.metrics_from_predict[class_label][2]
         return TP / (TP + FP) if (TP + FP) > 0 else 0.0
 
     def get_recall(self, conf_matrix: np.ndarray, class_label: int, from_threshold : bool = True) -> float:
-        # if class_label not in self.classes:
-        #     raise ValueError(f"Clase {class_label} no encontrada en los datos.")
-        
-        # idx = np.where(self.classes == class_label)[0][0]
-        # TP = conf_matrix[idx, idx]
-        # FN = np.sum(conf_matrix[idx, :]) - TP
         TP = self.metrics_from_threshold[class_label][0] if from_threshold else self.metrics_from_predict[class_label][0]
         FN = self.metrics_from_threshold[class_label][3] if from_threshold else self.metrics_from_predict[class_label][3]
         return TP / (TP + FN) if (TP + FN) > 0 else 0.0
@@ -359,8 +355,9 @@ if __name__ == "__main__":
     lda.fit()
     lda.predict(validation.drop(columns=['war_class']).to_numpy())
     # accuracy = lda.evaluate(validation["war_class"].to_numpy())
-    lda.evaluate(validation['war_class'].to_numpy())
+    total_accuracy : float = lda.evaluate(validation['war_class'].to_numpy())
     lda.evaluate_threshold(validation['war_class'].to_numpy(), threshold=0.5)
     conf_matrix = lda.get_confusion_matrix(validation["war_class"].to_numpy())
+    print("Total Accuracy: ", total_accuracy)
     lda.print_metrics(validation["war_class"].to_numpy())
     lda.plot_confusion_matrix(conf_matrix)
