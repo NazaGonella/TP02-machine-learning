@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sb
-from decision_tree import DecisionTree
+from problema2.src.decision_tree import DecisionTree
 
 class LogisticRegression:
     def __init__(self, x: np.ndarray, b: np.ndarray, L2: float = 0, initial_weight_value: float = 1):
@@ -61,7 +61,7 @@ class LogisticRegression:
 
     def evaluate(self, ground_truth: np.ndarray, input: np.ndarray, threshold: float = 0.5):
         # pred = self.predict(input)  # input debe ser el conjunto a evaluar
-        self.predict(input)
+        # self.predict(input)
         for cls in self.classes:
             gt_binary = (ground_truth == cls).astype(int)
             pred_binary = (self.pred == cls).astype(int)
@@ -479,39 +479,40 @@ class RandomForest:
 #     lda.plot_roc_curve()
 #     lda.plot_pr_curve()
 
-if __name__ == "__main__":
-    # Imports
-    import pandas as pd
-    import numpy as np
-    import matplotlib.pyplot as plt
-    import seaborn as sb
-    import os
-    import preprocessing as prepro
-    import data_handler
-    from IPython.display import display
+# if __name__ == "__main__":
+#     # Imports
+#     import pandas as pd
+#     import numpy as np
+#     import matplotlib.pyplot as plt
+#     import seaborn as sb
+#     import os
+#     import preprocessing as prepro
+#     import data_handler
+#     from IPython.display import display
 
-    project_root = os.path.abspath(os.path.join(os.getcwd(), ".."))
+#     project_root = os.path.abspath(os.path.join(os.getcwd(), ".."))
 
-    war_class_dev : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_dev.csv')
-    war_class_test : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_test.csv')
+#     war_class_dev : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_dev.csv')
+#     war_class_test : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_test.csv')
 
-    war_class_dev_processed_and_standardized : pd.DataFrame = prepro.process_and_stardardize(
-        war_class_dev, 
-        filename='war_class_dev', 
-        save_path=f'{project_root}/TP02/problema2/data/processed/'
-    )
+#     war_class_dev_processed_and_standardized : pd.DataFrame = prepro.process_and_stardardize(
+#         war_class_dev, 
+#         filename='war_class_dev', 
+#         save_path=f'{project_root}/TP02/problema2/data/processed/'
+#     )
 
-    train : pd.DataFrame
-    validation : pd.DataFrame
-    train, validation = data_handler.get_train_and_validation_sets(war_class_dev_processed_and_standardized, train_fraction=0.8, seed=42)
+#     train : pd.DataFrame
+#     validation : pd.DataFrame
+#     train, validation = data_handler.get_train_and_validation_sets(war_class_dev_processed_and_standardized, train_fraction=0.8, seed=42)
 
-    log_reg : LogisticRegression = LogisticRegression(train.drop(columns=['war_class']).to_numpy(), train['war_class'].to_numpy(), L2=0)
-    log_reg.fit_gradient_descent(step_size=0.001, tolerance=0.001, max_number_of_steps=10000)
-    total_accuracy : float = log_reg.get_accuracy()
-    # log_reg.evaluate(validation['war_class'].to_numpy())
-    log_reg.evaluate(ground_truth=validation['war_class'].to_numpy(), input=validation.drop(columns=['war_class']).to_numpy())
-    log_reg.print_metrics()
-    log_reg.plot_confusion_matrix()
+#     log_reg : LogisticRegression = LogisticRegression(train.drop(columns=['war_class']).to_numpy(), train['war_class'].to_numpy(), L2=0)
+#     log_reg.fit_gradient_descent(step_size=0.001, tolerance=0.001, max_number_of_steps=10000)
+#     total_accuracy : float = log_reg.get_accuracy()
+#     # log_reg.evaluate(validation['war_class'].to_numpy())
+#     log_reg.predict(validation.drop(columns=['war_class']).to_numpy())
+#     log_reg.evaluate(ground_truth=validation['war_class'].to_numpy(), input=validation.drop(columns=['war_class']).to_numpy())
+#     log_reg.print_metrics()
+#     log_reg.plot_confusion_matrix()
 
 # if __name__ == "__main__":
 #     # Imports
