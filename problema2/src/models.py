@@ -139,55 +139,120 @@ class LogisticRegression:
         self.fn : int = original_fn
         return (falses_positives_rateses, trues_positives_rateses)
 
-class LDA:
-    # def __init__(self, n_components):
-    def __init__(self, x : np.ndarray, b : np.ndarray, n_components : int):
-        self.linear_discriminants = None
-        self.n_components : int = n_components
-        self.x : np.ndarray = x
-        self.b : np.ndarray = b
+# class LDA:
+#     # def __init__(self, n_components):
+#     def __init__(self, x : np.ndarray, b : np.ndarray, n_components : int):
+#         self.linear_discriminants = None
+#         self.n_components : int = n_components
+#         self.x : np.ndarray = x
+#         self.b : np.ndarray = b
 
-    def fit(self):
-        n_features = self.x.shape[1]
-        class_labels = np.unique(self.b)
+#     def fit(self):
+#         n_features = self.x.shape[1]
+#         class_labels = np.unique(self.b)
 
-        # Within class scatter matrix:
-        # SW = sum((X_c - mean_X_c)^2 )
+#         # Within class scatter matrix:
+#         # SW = sum((X_c - mean_X_c)^2 )
 
-        # Between class scatter:
-        # SB = sum( n_c * (mean_X_c - mean_overall)^2 )
+#         # Between class scatter:
+#         # SB = sum( n_c * (mean_X_c - mean_overall)^2 )
 
-        mean_overall = np.mean(self.x, axis=0)
-        SW = np.zeros((n_features, n_features))
-        SB = np.zeros((n_features, n_features))
-        for c in class_labels:
-            X_c = np.array(self.x[self.b == c], dtype=np.float64)
-            mean_c = np.array(np.mean(X_c, axis=0), dtype=np.float64)
-            # (4, n_c) * (n_c, 4) = (4,4) -> transpose
-            SW += (X_c - mean_c).T.dot((X_c - mean_c))
+#         mean_overall = np.mean(self.x, axis=0)
+#         SW = np.zeros((n_features, n_features))
+#         SB = np.zeros((n_features, n_features))
+#         for c in class_labels:
+#             X_c = np.array(self.x[self.b == c], dtype=np.float64)
+#             mean_c = np.array(np.mean(X_c, axis=0), dtype=np.float64)
+#             # (4, n_c) * (n_c, 4) = (4,4) -> transpose
+#             SW += (X_c - mean_c).T.dot((X_c - mean_c))
 
-            # (4, 1) * (1, 4) = (4,4) -> reshape
-            n_c = X_c.shape[0]
-            mean_diff = (mean_c - mean_overall).reshape(n_features, 1).astype(np.float64)
-            SB += n_c * (mean_diff).dot(mean_diff.T)
+#             # (4, 1) * (1, 4) = (4,4) -> reshape
+#             n_c = X_c.shape[0]
+#             mean_diff = (mean_c - mean_overall).reshape(n_features, 1).astype(np.float64)
+#             SB += n_c * (mean_diff).dot(mean_diff.T)
 
-        # Determine SW^-1 * SB
-        A = np.linalg.inv(SW).dot(SB)
-        # Get eigenvalues and eigenvectors of SW^-1 * SB
-        eigenvalues, eigenvectors = np.linalg.eig(A)
-        # -> eigenvector v = [:,i] column vector, transpose for easier calculations
-        # sort eigenvalues high to low
-        eigenvectors = eigenvectors.T
-        idxs = np.argsort(abs(eigenvalues))[::-1]
-        eigenvalues = eigenvalues[idxs]
-        eigenvectors = eigenvectors[idxs]
-        # store first n eigenvectors
-        self.linear_discriminants = eigenvectors[0 : self.n_components]
+#         # Determine SW^-1 * SB
+#         A = np.linalg.inv(SW).dot(SB)
+#         # Get eigenvalues and eigenvectors of SW^-1 * SB
+#         eigenvalues, eigenvectors = np.linalg.eig(A)
+#         # -> eigenvector v = [:,i] column vector, transpose for easier calculations
+#         # sort eigenvalues high to low
+#         eigenvectors = eigenvectors.T
+#         idxs = np.argsort(abs(eigenvalues))[::-1]
+#         eigenvalues = eigenvalues[idxs]
+#         eigenvectors = eigenvectors[idxs]
+#         # store first n eigenvectors
+#         self.linear_discriminants = eigenvectors[0 : self.n_components]
 
-    def transform(self, X):
-        # project data
-        return np.dot(X, self.linear_discriminants.T)
+#     def transform(self):
+#         # project data
+#         return np.dot(self.x, self.linear_discriminants.T)
 
+class LinearDiscriminantAnalysis:
+    def __init__(self, x: np.ndarray, y: np.ndarray):
+        self.x: np.ndarray = np.array(x, dtype=np.float64)
+        self.y: np.ndarray = np.array(y, dtype=np.int32)
+        self.classes: np.ndarray = np.unique(self.y)
+        self.means: dict[int, np.ndarray] = {}
+        self.priors: dict[int, float] = {}
+        self.covariance: np.ndarray = np.array([])
+        self.inv_covariance: np.ndarray = np.array([])
+        self.fitted: bool = False
+        self.pred_labels: np.ndarray = np.array([])
+
+    def fit(self) -> None:
+        n_samples, n_features = self.x.shape
+        self.covariance = np.zeros((n_features, n_features))
+
+        for c in self.classes:
+            x_c = self.x[self.y == c]
+            self.means[c] = np.mean(x_c, axis=0)
+            self.priors[c] = x_c.shape[0] / n_samples
+            self.covariance += np.cov(x_c, rowvar=False, bias=True) * x_c.shape[0]
+
+        self.covariance /= n_samples
+        self.inv_covariance = np.linalg.inv(self.covariance)
+        self.fitted = True
+
+    def _discriminant_function(self, x: np.ndarray, c: int) -> float:
+        mu = self.means[c]
+        prior = self.priors[c]
+        # print(x.shape)
+        # print(self.inv_covariance.shape)
+        return float(x @ self.inv_covariance @ mu.T - 0.5 * mu.T @ self.inv_covariance @ mu + np.log(prior))
+
+    def predict(self, input: np.ndarray) -> None:
+        if not self.fitted:
+            raise RuntimeError("El modelo debe ser entrenado con fit() antes de predecir.")
+        
+        input = np.array(input, dtype=np.float64)
+        pred = []
+        for x_i in input:
+            scores = {c: self._discriminant_function(x_i, c) for c in self.classes}
+            pred.append(max(scores, key=scores.get))
+        self.pred_labels = np.array(pred, dtype=np.int32)
+
+    def evaluate(self, ground_truth: np.ndarray) -> float:
+        if self.pred_labels.size == 0:
+            raise RuntimeError("Debe ejecutar predict() antes de evaluar.")
+        return np.mean(self.pred_labels == ground_truth)
+
+    def get_confusion_matrix(self, ground_truth: np.ndarray) -> np.ndarray:
+        if self.pred_labels.size == 0:
+            raise RuntimeError("Debe ejecutar predict() antes de generar la matriz de confusión.")
+        
+        label_to_index = {label: i for i, label in enumerate(self.classes)}
+        n_classes = len(self.classes)
+        matrix = np.zeros((n_classes, n_classes), dtype=int)
+
+        for true, pred in zip(ground_truth, self.pred_labels):
+            i = label_to_index[int(true)]
+            j = label_to_index[int(pred)]
+            matrix[i][j] += 1
+
+        return matrix
+    
+    
 
 # Testing
 if __name__ == "__main__":
@@ -198,6 +263,7 @@ if __name__ == "__main__":
     import seaborn as sb
     import os
     import preprocessing as prepro
+    import data_handler
     from IPython.display import display
 
     project_root = os.path.abspath(os.path.join(os.getcwd(), ".."))
@@ -210,27 +276,47 @@ if __name__ == "__main__":
         filename='war_class_dev', 
         save_path=f'{project_root}/TP02/problema2/data/processed/'
     )
-    X, y = war_class_dev_processed_and_standardized.drop(columns=['war_class']).to_numpy(), war_class_dev_processed_and_standardized[['war_class']].to_numpy().flatten()
-    display(war_class_dev_processed_and_standardized.info())
-    print(X.shape)
-    print("")
-    print(y.shape)
+
+    train : pd.DataFrame
+    validation : pd.DataFrame
+    train, validation = data_handler.get_train_and_validation_sets(war_class_dev_processed_and_standardized, train_fraction=0.8, seed=42)
+    # X, y = train.drop(columns=['war_class']).to_numpy(), train[['war_class']].to_numpy().flatten()
+    # display(train.info())
+    # print(X.shape)
+    # print("")
+    # print(y.shape)
 
     # Project the data onto the 2 primary linear discriminants
-    lda = LDA(x = X, b = y, n_components=2)
+    # lda = LDA(x = X, b = y, n_components=2)
+    # lda.fit()
+    # X_projected = lda.transform()
+
+    # print("Shape of X:", X.shape)
+    # print("Shape of transformed X:", X_projected.shape)
+
+    # x1, x2 = X_projected[:, 0], X_projected[:, 1]
+
+    # plt.scatter(
+    #     x1, x2, c=y, edgecolor="none", alpha=0.8, cmap=plt.cm.get_cmap("viridis", 3)
+    # )
+
+    # plt.xlabel("Linear Discriminant 1")
+    # plt.ylabel("Linear Discriminant 2")
+    # plt.colorbar()
+    # plt.show()
+
+    lda = LinearDiscriminantAnalysis(train.drop(columns=['war_class']).to_numpy(), train['war_class'].to_numpy())
     lda.fit()
-    X_projected = lda.transform(X)
+    lda.predict(validation.drop(columns=['war_class']).to_numpy())
+    accuracy = lda.evaluate(validation["war_class"].to_numpy())
+    conf_matrix = lda.get_confusion_matrix(validation["war_class"].to_numpy())
+    # Print the accuracy
+    print(f"Accuracy: {accuracy}")
 
-    print("Shape of X:", X.shape)
-    print("Shape of transformed X:", X_projected.shape)
-
-    x1, x2 = X_projected[:, 0], X_projected[:, 1]
-
-    plt.scatter(
-        x1, x2, c=y, edgecolor="none", alpha=0.8, cmap=plt.cm.get_cmap("viridis", 3)
-    )
-
-    plt.xlabel("Linear Discriminant 1")
-    plt.ylabel("Linear Discriminant 2")
-    plt.colorbar()
+    # Plotting the confusion matrix using seaborn heatmap
+    plt.figure(figsize=(8, 6))
+    sb.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", xticklabels=lda.classes, yticklabels=lda.classes)
+    plt.title("Confusion Matrix")
+    plt.xlabel("Predicted")
+    plt.ylabel("True")
     plt.show()
