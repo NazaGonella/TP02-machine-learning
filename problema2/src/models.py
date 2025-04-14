@@ -138,3 +138,85 @@ class LogisticRegression:
         self.fp : int = original_fp
         self.fn : int = original_fn
         return (falses_positives_rateses, trues_positives_rateses)
+
+class LDA:
+    def __init__(self, x: np.ndarray, b: np.ndarray, n_components: int = 1):
+        self.x : np.ndarray = np.array(x, dtype=np.float64)
+        self.b : np.ndarray = np.array(b, dtype=np.int32)
+        self.n_components : int = n_components
+        self.linear_discriminants = None
+        self.projected = None
+        self.pred = None
+        self.tp = self.tn = self.fp = self.fn = 0
+
+    def fit(self):
+        n_features = self.x.shape[1]
+        class_labels = np.unique(self.b)
+        means = np.mean(self.x, axis=0)
+        SW = np.zeros((n_features, n_features))
+        SB = np.zeros((n_features, n_features))
+        for c in class_labels:
+            X_c = self.x[self.b == c]
+            mean_c = np.mean(X_c, axis=0)
+            SW += (X_c - mean_c).T.dot((X_c - mean_c))  # sumo matriz de covarianza
+            n_c = X_c.shape[0]
+            mean_diff = (mean_c - means).reshape(n_features, 1)
+            SB += n_c * mean_diff.dot(mean_diff.T)
+        A = np.linalg.inv(SW).dot(SB)
+        eigenvalues, eigenvectors = np.linalg.eig(A)
+        eigenvectors = eigenvectors.T
+        idxs = np.argsort(abs(eigenvalues))[::-1]
+        self.linear_discriminants = eigenvectors[idxs][:self.n_components]
+
+    def project(self):
+        self.projected = self.x @ self.linear_discriminants.T
+
+    # def predict(self):
+    #     means = []
+    #     for c in np.unique(self.b):
+    #         means.append(np.mean(self.projected[self.b == c]))
+    #     threshold = np.mean(means)
+    #     self.pred = (self.projected > threshold).astype(int).flatten()
+
+    def predict(self):
+        class_labels = np.unique(self.b)
+        # Calculo el centroide proyectado de cada clase
+        means = {
+            c: np.mean(self.projected[self.b == c], axis=0)
+            for c in class_labels
+        }
+        # Clasifico por cercanía al centroide
+        self.pred = np.array([
+            min(means, key=lambda c: np.linalg.norm(p - means[c]))
+            for p in self.projected
+        ])
+
+    def evaluate(self):
+        self.tp = np.sum((self.pred == 1) & (self.b == 1))
+        self.tn = np.sum((self.pred == 0) & (self.b == 0))
+        self.fp = np.sum((self.pred == 1) & (self.b == 0))
+        self.fn = np.sum((self.pred == 0) & (self.b == 1))
+
+    def get_confusion_matrix(self):
+        return (self.tp, self.tn, self.fp, self.fn)
+
+    def get_accuracy(self):
+        total = self.tp + self.tn + self.fp + self.fn
+        return (self.tp + self.tn) / total if total != 0 else 0.0
+
+    def get_precision(self):
+        return self.tp / (self.tp + self.fp) if (self.tp + self.fp) != 0 else 0.0
+
+    def get_recall(self):
+        return self.tp / (self.tp + self.fn) if (self.tp + self.fn) != 0 else 0.0
+
+    def get_f_score(self):
+        precision = self.get_precision()
+        recall = self.get_recall()
+        return 2 * precision * recall / (precision + recall) if (precision + recall) != 0 else 0.0
+
+    def print_metrics(self):
+        print("ACCURACY   :", self.get_accuracy())
+        print("PRECISION  :", self.get_precision())
+        print("RECALL     :", self.get_recall())
+        print("F-SCORE    :", self.get_f_score())
