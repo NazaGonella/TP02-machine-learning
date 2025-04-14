@@ -140,13 +140,16 @@ class LogisticRegression:
         return (falses_positives_rateses, trues_positives_rateses)
 
 class LDA:
-    def __init__(self, n_components):
-        self.n_components = n_components
+    # def __init__(self, n_components):
+    def __init__(self, x : np.ndarray, b : np.ndarray, n_components : int):
         self.linear_discriminants = None
+        self.n_components : int = n_components
+        self.x : np.ndarray = x
+        self.b : np.ndarray = b
 
-    def fit(self, X, y):
-        n_features = X.shape[1]
-        class_labels = np.unique(y)
+    def fit(self):
+        n_features = self.x.shape[1]
+        class_labels = np.unique(self.b)
 
         # Within class scatter matrix:
         # SW = sum((X_c - mean_X_c)^2 )
@@ -154,11 +157,11 @@ class LDA:
         # Between class scatter:
         # SB = sum( n_c * (mean_X_c - mean_overall)^2 )
 
-        mean_overall = np.mean(X, axis=0)
+        mean_overall = np.mean(self.x, axis=0)
         SW = np.zeros((n_features, n_features))
         SB = np.zeros((n_features, n_features))
         for c in class_labels:
-            X_c = np.array(X[y == c], dtype=np.float64)
+            X_c = np.array(self.x[self.b == c], dtype=np.float64)
             mean_c = np.array(np.mean(X_c, axis=0), dtype=np.float64)
             # (4, n_c) * (n_c, 4) = (4,4) -> transpose
             SW += (X_c - mean_c).T.dot((X_c - mean_c))
@@ -214,8 +217,8 @@ if __name__ == "__main__":
     print(y.shape)
 
     # Project the data onto the 2 primary linear discriminants
-    lda = LDA(2)
-    lda.fit(X, y)
+    lda = LDA(x = X, b = y, n_components=2)
+    lda.fit()
     X_projected = lda.transform(X)
 
     print("Shape of X:", X.shape)
