@@ -199,7 +199,7 @@ class LinearDiscriminantAnalysis:
             TN = np.sum((y_pred == 0) & (y_true == 0))
             FP = np.sum((y_pred == 1) & (y_true == 0))
             FN = np.sum((y_pred == 0) & (y_true == 1))
-            self.metrics[c] = (TP, TN, FP, FN)
+            self.metrics[c] = [TP, TN, FP, FN]
         return np.mean(self.pred_labels == ground_truth)
 
     def evaluate_threshold(self, ground_truth: np.ndarray, threshold: float):
@@ -208,7 +208,10 @@ class LinearDiscriminantAnalysis:
 
         for c in self.classes:
             y_true = (ground_truth == c).astype(int)
+            # y_scores = np.array([score[c] for score in self.scores])
             y_scores = np.array([score[c] for score in self.scores])
+            y_scores = (y_scores - y_scores.min()) / (y_scores.max() - y_scores.min() + 1e-10)
+
             y_pred = (y_scores >= threshold).astype(int)
 
             TP = np.sum((y_pred == 1) & (y_true == 1))
@@ -312,10 +315,32 @@ class LinearDiscriminantAnalysis:
     def plot_confusion_matrix(self, conf_matrix) -> None:
         # Plotting the confusion matrix using seaborn heatmap
         plt.figure(figsize=(8, 6))
-        sb.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", xticklabels=lda.classes, yticklabels=lda.classes)
+        sb.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", xticklabels=self.classes, yticklabels=self.classes)
         plt.title("Confusion Matrix")
         plt.xlabel("Predicted")
         plt.ylabel("True")
+        plt.show()
+
+    def plot_roc_curve(self) -> None:
+        for c in self.classes:
+            recalls, precisions = self.get_roc_points(validation["war_class"].to_numpy(), c, 20)
+            plt.plot(recalls, precisions, label=f'Class {c}')
+        plt.title("Precision-Recall (PR)")
+        plt.grid(visible=True, alpha=0.5)
+        plt.xlabel("Recall")
+        plt.ylabel("Precision")
+        plt.legend()
+        plt.show()
+
+    def plot_pr_curve(self) -> None:
+        for c in self.classes:
+            falses_positives_rateses, trues_positives_rateses = self.get_pr_points(validation["war_class"].to_numpy(), c, 20)
+            plt.plot(falses_positives_rateses, trues_positives_rateses, label=f'Class {c}')
+        plt.title("Precision-Recall (PR)")
+        plt.grid(visible=True, alpha=0.5)
+        plt.xlabel("False Positive Rate")
+        plt.ylabel("True Positive Rate")
+        plt.legend()
         plt.show()
 
 # Testing
@@ -354,5 +379,8 @@ if __name__ == "__main__":
     conf_matrix = lda.get_confusion_matrix(validation["war_class"].to_numpy())
     print("Total Accuracy: ", total_accuracy)
     lda.print_metrics(validation["war_class"].to_numpy())
-    print(lda.get_pr_points(validation["war_class"].to_numpy(), 1, 10))
     lda.plot_confusion_matrix(conf_matrix)
+    lda.plot_pr_curve()
+    lda.plot_roc_curve()
+    # print("AUC-PR  : ", utils.get_area_under_curve(recalls, precisions))
+    # print("AUC-ROC : ", utils.get_area_under_curve(falses_positives_rateses, recalls))
