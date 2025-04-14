@@ -1,19 +1,16 @@
 from collections import Counter
-
 import numpy as np
 
 
 def entropy(y):
     y = y.astype(int)
-    hist = np.bincount(y)
-    ps = hist / len(y)
-    return -np.sum([p * np.log2(p) for p in ps if p > 0])
+    counts = np.bincount(y)
+    probabilities = counts / len(y)
+    return -np.sum([p * np.log2(p) for p in probabilities if p > 0])
 
 
 class Node:
-    def __init__(
-        self, feature=None, threshold=None, left=None, right=None, *, value=None
-    ):
+    def __init__(self, feature=None, threshold=None, left=None, right=None, *, value=None):
         self.feature = feature
         self.threshold = threshold
         self.left = left
@@ -32,86 +29,83 @@ class DecisionTree:
         self.root = None
 
     def fit(self, X, y):
-        self.n_feats = X.shape[1] if not self.n_feats else min(self.n_feats, X.shape[1])
-        self.root = self._grow_tree(X, y)
+        self.n_feats = X.shape[1] if self.n_feats is None else min(self.n_feats, X.shape[1])
+        self.root = self._build_tree(X, y, depth=0)
 
     def predict(self, X):
-        return np.array([self._traverse_tree(x, self.root) for x in X])
+        return np.array([self._predict_sample(sample, self.root) for sample in X])
 
-    def _grow_tree(self, X, y, depth=0):
-        n_samples, n_features = X.shape
-        n_labels = len(np.unique(y))
+    def _build_tree(self, X, y, depth):
+        num_samples, num_features = X.shape
+        unique_labels = np.unique(y)
 
-        # stopping criteria
         if (
             depth >= self.max_depth
-            or n_labels == 1
-            or n_samples < self.min_samples_split
+            or len(unique_labels) == 1
+            or num_samples < self.min_samples_split
         ):
-            leaf_value = self._most_common_label(y)
-            return Node(value=leaf_value)
+            return Node(value=self._majority_class(y))
 
-        feat_idxs = np.random.choice(n_features, self.n_feats, replace=False)
+        feature_indices = np.random.choice(num_features, self.n_feats, replace=False)
 
-        # greedily select the best split according to information gain
-        best_feat, best_thresh = self._best_criteria(X, y, feat_idxs)
+        best_feature, best_threshold = self._find_best_split(X, y, feature_indices)
 
-        # grow the children that result from the split
-        left_idxs, right_idxs = self._split(X[:, best_feat], best_thresh)
-        left = self._grow_tree(X[left_idxs, :], y[left_idxs], depth + 1)
-        right = self._grow_tree(X[right_idxs, :], y[right_idxs], depth + 1)
-        return Node(best_feat, best_thresh, left, right)
+        left_idx, right_idx = self._partition(X[:, best_feature], best_threshold)
 
-    def _best_criteria(self, X, y, feat_idxs):
-        best_gain = -1
-        split_idx, split_thresh = None, None
-        for feat_idx in feat_idxs:
-            X_column = X[:, feat_idx]
-            thresholds = np.unique(X_column)
-            for threshold in thresholds:
-                gain = self._information_gain(y, X_column, threshold)
+        left_child = self._build_tree(X[left_idx], y[left_idx], depth + 1)
+        right_child = self._build_tree(X[right_idx], y[right_idx], depth + 1)
+
+        return Node(feature=best_feature, threshold=best_threshold, left=left_child, right=right_child)
+
+    def _find_best_split(self, X, y, feature_indices):
+        best_gain = -np.inf
+        split_feature = None
+        split_threshold = None
+
+        for idx in feature_indices:
+            values = np.unique(X[:, idx])
+            for val in values:
+                gain = self._calculate_information_gain(y, X[:, idx], val)
 
                 if gain > best_gain:
                     best_gain = gain
-                    split_idx = feat_idx
-                    split_thresh = threshold
+                    split_feature = idx
+                    split_threshold = val
 
-        return split_idx, split_thresh
+        return split_feature, split_threshold
 
-    def _information_gain(self, y, X_column, split_thresh):
-        # parent loss
+    def _calculate_information_gain(self, y, feature_column, threshold):
         parent_entropy = entropy(y)
 
-        # generate split
-        left_idxs, right_idxs = self._split(X_column, split_thresh)
+        left_idx, right_idx = self._partition(feature_column, threshold)
 
-        if len(left_idxs) == 0 or len(right_idxs) == 0:
+        if len(left_idx) == 0 or len(right_idx) == 0:
             return 0
 
-        # compute the weighted avg. of the loss for the children
-        n = len(y)
-        n_l, n_r = len(left_idxs), len(right_idxs)
-        e_l, e_r = entropy(y[left_idxs]), entropy(y[right_idxs])
-        child_entropy = (n_l / n) * e_l + (n_r / n) * e_r
+        n_total = len(y)
+        n_left = len(left_idx)
+        n_right = len(right_idx)
 
-        # information gain is difference in loss before vs. after split
-        ig = parent_entropy - child_entropy
-        return ig
+        entropy_left = entropy(y[left_idx])
+        entropy_right = entropy(y[right_idx])
 
-    def _split(self, X_column, split_thresh):
-        left_idxs = np.argwhere(X_column <= split_thresh).flatten()
-        right_idxs = np.argwhere(X_column > split_thresh).flatten()
-        return left_idxs, right_idxs
+        weighted_entropy = (n_left / n_total) * entropy_left + (n_right / n_total) * entropy_right
 
-    def _traverse_tree(self, x, node):
-        if node.is_leaf_node():
-            return node.value
+        return parent_entropy - weighted_entropy
 
-        if x[node.feature] <= node.threshold:
-            return self._traverse_tree(x, node.left)
-        return self._traverse_tree(x, node.right)
+    def _partition(self, feature_column, threshold):
+        left_idx = np.where(feature_column <= threshold)[0]
+        right_idx = np.where(feature_column > threshold)[0]
+        return left_idx, right_idx
 
-    def _most_common_label(self, y):
-        counter = Counter(y)
-        most_common = counter.most_common(1)[0][0]
-        return most_common
+    def _predict_sample(self, x, node):
+        while not node.is_leaf_node():
+            if x[node.feature] <= node.threshold:
+                node = node.left
+            else:
+                node = node.right
+        return node.value
+
+    def _majority_class(self, y):
+        label_counts = Counter(y)
+        return label_counts.most_common(1)[0][0]
