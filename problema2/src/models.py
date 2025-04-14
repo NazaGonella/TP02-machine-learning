@@ -198,26 +198,30 @@ class LinearDiscriminantAnalysis:
 
         return matrix
 
-    def get_precision(self, conf_matrix: np.ndarray) -> np.ndarray:
-        precision_scores = []
-        for i in range(conf_matrix.shape[0]):
-            TP = conf_matrix[i, i]
-            FP = np.sum(conf_matrix[:, i]) - TP
-            precision_scores.append(TP / (TP + FP) if TP + FP > 0 else 0.0)
-        return np.array(precision_scores)
+    def get_precision(self, conf_matrix: np.ndarray, class_label: int) -> float:
+        if class_label not in self.classes:
+            raise ValueError(f"Clase {class_label} no encontrada en los datos.")
+        
+        idx = np.where(self.classes == class_label)[0][0]
+        TP = conf_matrix[idx, idx]
+        FP = np.sum(conf_matrix[:, idx]) - TP
+        return TP / (TP + FP) if (TP + FP) > 0 else 0.0
 
-    def get_recall(self, conf_matrix: np.ndarray) -> np.ndarray:
-        recall_scores = []
-        for i in range(conf_matrix.shape[0]):
-            TP = conf_matrix[i, i]
-            FN = np.sum(conf_matrix[i, :]) - TP
-            recall_scores.append(TP / (TP + FN) if TP + FN > 0 else 0.0)
-        return np.array(recall_scores)
+    def get_recall(self, conf_matrix: np.ndarray, class_label: int) -> float:
+        if class_label not in self.classes:
+            raise ValueError(f"Clase {class_label} no encontrada en los datos.")
+        
+        idx = np.where(self.classes == class_label)[0][0]
+        TP = conf_matrix[idx, idx]
+        FN = np.sum(conf_matrix[idx, :]) - TP
+        return TP / (TP + FN) if (TP + FN) > 0 else 0.0
     
-    def get_f_score(self, conf_matrix: np.ndarray) -> np.ndarray:
+    def get_f_score(self, conf_matrix: np.ndarray, class_label : int) -> np.ndarray:
         precision = self.get_precision(conf_matrix)
         recall = self.get_recall(conf_matrix)
         return 2 * (precision * recall) / (precision + recall)
+    
+    
     
     def print_metrics(self, ground_truth: np.ndarray) -> None:
         if self.pred_labels.size == 0:
@@ -227,9 +231,9 @@ class LinearDiscriminantAnalysis:
         conf_matrix = self.get_confusion_matrix(ground_truth)
 
         # Calculate precision, recall, and F-score
-        precision = self.get_precision(conf_matrix)
-        recall = self.get_recall(conf_matrix)
-        f_score = self.get_f_score(conf_matrix)
+        # precision = self.get_precision(conf_matrix)
+        # recall = self.get_recall(conf_matrix)
+        # f_score = self.get_f_score(conf_matrix)
         
         # Calculate accuracy
         accuracy = self.evaluate(ground_truth)
@@ -241,9 +245,11 @@ class LinearDiscriminantAnalysis:
         
         for i, class_label in enumerate(self.classes):
             print(f"\nClass {class_label}:")
-            print(f"  Precision: {precision[i]:.4f}")
-            print(f"  Recall: {recall[i]:.4f}")
-            print(f"  F-Score: {f_score[i]:.4f}")
+            # print(f"  Precision: {precision[i]:.4f}")
+            print(f"Precision: {self.get_precision(conf_matrix=conf_matrix, class_label=i+1):.4f}")
+            # print(f"  Recall: {recall[i]:.4f}")
+            print(f"Recall: {self.get_recall(conf_matrix=conf_matrix, class_label=i+1):.4f}")
+            # print(f"  F-Score: {f_score[i]:.4f}")
         
         # You can add other metrics here, like AUC-ROC, AUC-PR, etc., if needed
     
