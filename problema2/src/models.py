@@ -18,6 +18,7 @@ class LogisticRegression:
                 'pred_probs': np.array([])
             } for cls in self.classes
         }
+        self.pred = None
 
     def sigmoid_function(self, z):
         return 1 / (1 + np.exp(-z))
@@ -55,25 +56,29 @@ class LogisticRegression:
             probs[cls] = self.sigmoid_function(input_with_bias @ w)
             self.models[cls]['pred_probs'] = probs[cls]
         stacked_probs = np.stack([probs[cls] for cls in self.classes], axis=1)
-        return self.classes[np.argmax(stacked_probs, axis=1)]
+        # return self.classes[np.argmax(stacked_probs, axis=1)]
+        self.pred = self.classes[np.argmax(stacked_probs, axis=1)]
 
     def evaluate(self, ground_truth: np.ndarray, input: np.ndarray, threshold: float = 0.5):
-        pred = self.predict(input)  # input debe ser el conjunto a evaluar
+        # pred = self.predict(input)  # input debe ser el conjunto a evaluar
+        self.predict(input)
         for cls in self.classes:
             gt_binary = (ground_truth == cls).astype(int)
-            pred_binary = (pred == cls).astype(int)
+            pred_binary = (self.pred == cls).astype(int)
             self.models[cls]['tp'] = np.sum((pred_binary == 1) & (gt_binary == 1))
             self.models[cls]['tn'] = np.sum((pred_binary == 0) & (gt_binary == 0))
             self.models[cls]['fp'] = np.sum((pred_binary == 1) & (gt_binary == 0))
             self.models[cls]['fn'] = np.sum((pred_binary == 0) & (gt_binary == 1))
 
     def get_accuracy(self) -> float:
-        pred = self.predict(self.x[:, 1:])
-        return np.mean(pred == self.b)
+        # pred = self.predict(self.x[:, 1:])
+        self.predict(self.x[:, 1:])
+        return np.mean(self.pred == self.b)
 
     def get_confusion_matrix(self) -> np.ndarray:
-        pred = self.predict(self.x[:, 1:])
-        conf_matrix = pd.crosstab(self.b, pred, rownames=['Actual'], colnames=['Predicted'], dropna=False)
+        # pred = self.predict(self.x[:, 1:])
+        self.predict(self.x[:, 1:])
+        conf_matrix = pd.crosstab(self.b, self.pred, rownames=['Actual'], colnames=['Predicted'], dropna=False)
         return conf_matrix
 
     def print_metrics(self):
@@ -474,39 +479,39 @@ class RandomForest:
 #     lda.plot_roc_curve()
 #     lda.plot_pr_curve()
 
-# if __name__ == "__main__":
-#     # Imports
-#     import pandas as pd
-#     import numpy as np
-#     import matplotlib.pyplot as plt
-#     import seaborn as sb
-#     import os
-#     import preprocessing as prepro
-#     import data_handler
-#     from IPython.display import display
+if __name__ == "__main__":
+    # Imports
+    import pandas as pd
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import seaborn as sb
+    import os
+    import preprocessing as prepro
+    import data_handler
+    from IPython.display import display
 
-#     project_root = os.path.abspath(os.path.join(os.getcwd(), ".."))
+    project_root = os.path.abspath(os.path.join(os.getcwd(), ".."))
 
-#     war_class_dev : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_dev.csv')
-#     war_class_test : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_test.csv')
+    war_class_dev : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_dev.csv')
+    war_class_test : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_test.csv')
 
-#     war_class_dev_processed_and_standardized : pd.DataFrame = prepro.process_and_stardardize(
-#         war_class_dev, 
-#         filename='war_class_dev', 
-#         save_path=f'{project_root}/TP02/problema2/data/processed/'
-#     )
+    war_class_dev_processed_and_standardized : pd.DataFrame = prepro.process_and_stardardize(
+        war_class_dev, 
+        filename='war_class_dev', 
+        save_path=f'{project_root}/TP02/problema2/data/processed/'
+    )
 
-#     train : pd.DataFrame
-#     validation : pd.DataFrame
-#     train, validation = data_handler.get_train_and_validation_sets(war_class_dev_processed_and_standardized, train_fraction=0.8, seed=42)
+    train : pd.DataFrame
+    validation : pd.DataFrame
+    train, validation = data_handler.get_train_and_validation_sets(war_class_dev_processed_and_standardized, train_fraction=0.8, seed=42)
 
-#     log_reg : LogisticRegression = LogisticRegression(train.drop(columns=['war_class']).to_numpy(), train['war_class'].to_numpy(), L2=0)
-#     log_reg.fit_gradient_descent(step_size=0.001, tolerance=0.001, max_number_of_steps=10000)
-#     total_accuracy : float = log_reg.get_accuracy()
-#     # log_reg.evaluate(validation['war_class'].to_numpy())
-#     log_reg.evaluate(ground_truth=validation['war_class'].to_numpy(), input=validation.drop(columns=['war_class']).to_numpy())
-#     log_reg.print_metrics()
-#     log_reg.plot_confusion_matrix()
+    log_reg : LogisticRegression = LogisticRegression(train.drop(columns=['war_class']).to_numpy(), train['war_class'].to_numpy(), L2=0)
+    log_reg.fit_gradient_descent(step_size=0.001, tolerance=0.001, max_number_of_steps=10000)
+    total_accuracy : float = log_reg.get_accuracy()
+    # log_reg.evaluate(validation['war_class'].to_numpy())
+    log_reg.evaluate(ground_truth=validation['war_class'].to_numpy(), input=validation.drop(columns=['war_class']).to_numpy())
+    log_reg.print_metrics()
+    log_reg.plot_confusion_matrix()
 
 # if __name__ == "__main__":
 #     # Imports
