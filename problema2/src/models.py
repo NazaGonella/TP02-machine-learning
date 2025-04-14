@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sb
+from decision_tree import DecisionTree
 
 class LogisticRegression:
     def __init__(self, x: np.ndarray, b: np.ndarray, L2: float = 0, initial_weight_value: float = 1):
@@ -305,43 +306,173 @@ class LinearDiscriminantAnalysis:
         plt.legend()
         plt.show()
 
+class RandomForest:
+    def __init__(self, n_trees=10, min_samples_split=2, max_depth=100, n_feats=None):
+        self.n_trees = n_trees
+        self.min_samples_split = min_samples_split
+        self.max_depth = max_depth
+        self.n_feats = n_feats
+        self.trees = []
+        self.fitted = False
+        self.pred_labels = np.array([])
+        self.metrics = {}
+        self.classes = None
+
+    def bootstrap_sample(self, X, y):
+        n_samples = X.shape[0]
+        idxs = np.random.choice(n_samples, n_samples, replace=True)
+        return X[idxs], y[idxs]
+
+    def most_common_label(self, y):
+        label_counts = {}
+        for label in y:
+            if label in label_counts:
+                label_counts[label] += 1
+            else:
+                label_counts[label] = 1
+        most_common = max(label_counts, key=label_counts.get)
+        return most_common
+
+    def fit(self, X, y):
+        self.trees = []
+        self.classes = np.unique(y)
+        for _ in range(self.n_trees):
+            tree = DecisionTree(
+                min_samples_split=self.min_samples_split,
+                max_depth=self.max_depth,
+                n_feats=self.n_feats,
+            )
+            X_samp, y_samp = self.bootstrap_sample(X, y)
+            tree.fit(X_samp, y_samp)
+            self.trees.append(tree)
+        self.fitted = True
+
+    def predict(self, X):
+        if not self.fitted:
+            raise RuntimeError("El modelo no ha sido ajustado. Ejecute 'fit' primero.")
+        
+        tree_preds = np.array([tree.predict(X) for tree in self.trees])
+        tree_preds = np.swapaxes(tree_preds, 0, 1)
+        self.pred_labels = np.array([self.most_common_label(tree_pred) for tree_pred in tree_preds])
+        return self.pred_labels
+
+    def evaluate(self, ground_truth: np.ndarray) -> float:
+        if self.pred_labels.size == 0:
+            raise RuntimeError("Debe ejecutar 'predict()' antes de evaluar.")
+        accuracy = np.mean(self.pred_labels == ground_truth)
+        return accuracy
+
+    def get_confusion_matrix(self, ground_truth: np.ndarray) -> np.ndarray:
+        if self.pred_labels.size == 0:
+            raise RuntimeError("Debe ejecutar 'predict()' antes de generar la matriz de confusión.")
+        
+        classes = np.unique(ground_truth)
+        label_to_index = {label: i for i, label in enumerate(classes)}
+        n_classes = len(classes)
+        matrix = np.zeros((n_classes, n_classes), dtype=int)
+
+        for true, pred in zip(ground_truth, self.pred_labels):
+            i = label_to_index[int(true)]
+            j = label_to_index[int(pred)]
+            matrix[i][j] += 1
+
+        return matrix
+
+    def get_accuracy(self, class_label: int) -> float:
+        TP = self.metrics[class_label][0]
+        TN = self.metrics[class_label][1]
+        FP = self.metrics[class_label][2]
+        FN = self.metrics[class_label][3]
+        return (TP + TN) / (TP + TN + FP + FN) if (TP + TN + FP + FN) > 0 else 0.0
+
+    def get_precision(self, class_label: int) -> float:
+        TP = self.metrics[class_label][0]
+        FP = self.metrics[class_label][2]
+        return TP / (TP + FP) if (TP + FP) > 0 else 0.0
+
+    def get_recall(self, class_label: int) -> float:
+        TP = self.metrics[class_label][0]
+        FN = self.metrics[class_label][3]
+        return TP / (TP + FN) if (TP + FN) > 0 else 0.0
+
+    def get_f_score(self, class_label: int) -> float:
+        precision = self.get_precision(class_label)
+        recall = self.get_recall(class_label)
+        return 2 * (precision * recall) / (precision + recall)
+
+    def print_metrics(self, ground_truth: np.ndarray) -> None:
+        accuracy = self.evaluate(ground_truth)
+        print(f"Accuracy: {accuracy:.4f}")
+
+        # Initialize the metrics for each class
+        for class_label in np.unique(ground_truth):
+            TP = TN = FP = FN = 0
+            for true, pred in zip(ground_truth, self.pred_labels):
+                if true == class_label and pred == class_label:
+                    TP += 1
+                elif true != class_label and pred != class_label:
+                    TN += 1
+                elif true != class_label and pred == class_label:
+                    FP += 1
+                elif true == class_label and pred != class_label:
+                    FN += 1
+            
+            self.metrics[class_label] = [TP, TN, FP, FN]
+            print(f"\nClass {class_label}:")
+            print(f"Precision: {self.get_precision(class_label):.4f}")
+            print(f"Recall: {self.get_recall(class_label):.4f}")
+            print(f"F-Score: {self.get_f_score(class_label):.4f}")
+
+    def plot_confusion_matrix(self, conf_matrix) -> None:
+        # Plotting the confusion matrix using seaborn heatmap
+        plt.figure(figsize=(8, 6))
+        sb.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", xticklabels=self.classes, yticklabels=self.classes)
+        plt.title("Confusion Matrix")
+        plt.xlabel("Predicted")
+        plt.ylabel("True")
+        plt.show()
+
+
+
+        
+
 # Testing
-if __name__ == "__main__":
-    # Imports
-    import pandas as pd
-    import numpy as np
-    import matplotlib.pyplot as plt
-    import seaborn as sb
-    import os
-    import preprocessing as prepro
-    import data_handler
-    from IPython.display import display
+# if __name__ == "__main__":
+#     # Imports
+#     import pandas as pd
+#     import numpy as np
+#     import matplotlib.pyplot as plt
+#     import seaborn as sb
+#     import os
+#     import preprocessing as prepro
+#     import data_handler
+#     from IPython.display import display
 
-    project_root = os.path.abspath(os.path.join(os.getcwd(), ".."))
+#     project_root = os.path.abspath(os.path.join(os.getcwd(), ".."))
 
-    war_class_dev : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_dev.csv')
-    war_class_test : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_test.csv')
+#     war_class_dev : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_dev.csv')
+#     war_class_test : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_test.csv')
 
-    war_class_dev_processed_and_standardized : pd.DataFrame = prepro.process_and_stardardize(
-        war_class_dev, 
-        filename='war_class_dev', 
-        save_path=f'{project_root}/TP02/problema2/data/processed/'
-    )
+#     war_class_dev_processed_and_standardized : pd.DataFrame = prepro.process_and_stardardize(
+#         war_class_dev, 
+#         filename='war_class_dev', 
+#         save_path=f'{project_root}/TP02/problema2/data/processed/'
+#     )
 
-    train : pd.DataFrame
-    validation : pd.DataFrame
-    train, validation = data_handler.get_train_and_validation_sets(war_class_dev_processed_and_standardized, train_fraction=0.8, seed=42)
+#     train : pd.DataFrame
+#     validation : pd.DataFrame
+#     train, validation = data_handler.get_train_and_validation_sets(war_class_dev_processed_and_standardized, train_fraction=0.8, seed=42)
 
-    lda = LinearDiscriminantAnalysis(train.drop(columns=['war_class']).to_numpy(), train['war_class'].to_numpy())
-    lda.fit()
-    lda.predict(validation.drop(columns=['war_class']).to_numpy())
-    total_accuracy : float = lda.evaluate(validation['war_class'].to_numpy())
-    lda.evaluate_threshold(validation['war_class'].to_numpy(), threshold=0.5)
-    print("Total Accuracy: ", total_accuracy)
-    lda.print_metrics(validation["war_class"].to_numpy())
-    lda.plot_confusion_matrix(lda.get_confusion_matrix(validation["war_class"].to_numpy()))
-    lda.plot_roc_curve()
-    lda.plot_pr_curve()
+#     lda = LinearDiscriminantAnalysis(train.drop(columns=['war_class']).to_numpy(), train['war_class'].to_numpy())
+#     lda.fit()
+#     lda.predict(validation.drop(columns=['war_class']).to_numpy())
+#     total_accuracy : float = lda.evaluate(validation['war_class'].to_numpy())
+#     lda.evaluate_threshold(validation['war_class'].to_numpy(), threshold=0.5)
+#     print("Total Accuracy: ", total_accuracy)
+#     lda.print_metrics(validation["war_class"].to_numpy())
+#     lda.plot_confusion_matrix(lda.get_confusion_matrix(validation["war_class"].to_numpy()))
+#     lda.plot_roc_curve()
+#     lda.plot_pr_curve()
 
 # if __name__ == "__main__":
 #     # Imports
@@ -376,3 +507,43 @@ if __name__ == "__main__":
 #     log_reg.evaluate(ground_truth=validation['war_class'].to_numpy(), input=validation.drop(columns=['war_class']).to_numpy())
 #     log_reg.print_metrics()
 #     log_reg.plot_confusion_matrix()
+
+if __name__ == "__main__":
+    # Imports
+    import pandas as pd
+    import numpy as np
+    import matplotlib.pyplot as plt
+    import seaborn as sb
+    import os
+    import preprocessing as prepro
+    import data_handler
+    from IPython.display import display
+
+    project_root = os.path.abspath(os.path.join(os.getcwd(), ".."))
+
+    war_class_dev : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_dev.csv')
+    war_class_test : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_test.csv')
+
+    war_class_dev_processed_and_standardized : pd.DataFrame = prepro.process_and_stardardize(
+        war_class_dev, 
+        filename='war_class_dev', 
+        save_path=f'{project_root}/TP02/problema2/data/processed/'
+    )
+
+    train : pd.DataFrame
+    validation : pd.DataFrame
+    train, validation = data_handler.get_train_and_validation_sets(war_class_dev_processed_and_standardized, train_fraction=0.8, seed=42)
+
+    # Train RandomForest model
+    rf = RandomForest(n_trees=10, min_samples_split=2, max_depth=10)
+    rf.fit(train.drop(columns=['war_class']).to_numpy(), train['war_class'].to_numpy())
+    print("LISTO")
+
+    # Predict and evaluate the model
+    rf.predict(validation.drop(columns=['war_class']).to_numpy())
+    total_accuracy : float = rf.evaluate(validation['war_class'].to_numpy())
+    print("Total Accuracy: ", total_accuracy)
+    rf.print_metrics(validation["war_class"].to_numpy())
+
+    # # Plot confusion matrix
+    rf.plot_confusion_matrix(rf.get_confusion_matrix(validation["war_class"].to_numpy()))
