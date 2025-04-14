@@ -301,11 +301,7 @@ class LinearDiscriminantAnalysis:
     def print_metrics(self, ground_truth: np.ndarray) -> None:
         if self.pred_labels.size == 0:
             raise RuntimeError("Debe ejecutar predict() antes de evaluar.")
-        conf_matrix = self.get_confusion_matrix(ground_truth)
-        # accuracy = self.evaluate(ground_truth)
-        print("Confusion Matrix:")
-        print(conf_matrix)
-        # print("\nTotal Accuracy: {:.4f}".format(accuracy))        
+        conf_matrix = self.get_confusion_matrix(ground_truth)     
         for label in self.classes:
             print(f"\nClass {label}:")
             print(f"Precision: {self.get_precision(class_label=label, from_threshold=False):.4f}")
@@ -382,14 +378,10 @@ if __name__ == "__main__":
     lda = LinearDiscriminantAnalysis(train.drop(columns=['war_class']).to_numpy(), train['war_class'].to_numpy())
     lda.fit()
     lda.predict(validation.drop(columns=['war_class']).to_numpy())
-    # accuracy = lda.evaluate(validation["war_class"].to_numpy())
     total_accuracy : float = lda.evaluate(validation['war_class'].to_numpy())
     lda.evaluate_threshold(validation['war_class'].to_numpy(), threshold=0.5)
-    conf_matrix = lda.get_confusion_matrix(validation["war_class"].to_numpy())
     print("Total Accuracy: ", total_accuracy)
     lda.print_metrics(validation["war_class"].to_numpy())
-    lda.plot_confusion_matrix(conf_matrix)
+    lda.plot_confusion_matrix(lda.get_confusion_matrix(validation["war_class"].to_numpy()))
     lda.plot_roc_curve()
     lda.plot_pr_curve()
-    # print("AUC-PR  : ", utils.get_area_under_curve(recalls, precisions))
-    # print("AUC-ROC : ", utils.get_area_under_curve(falses_positives_rateses, recalls))
