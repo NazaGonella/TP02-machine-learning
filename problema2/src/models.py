@@ -246,6 +246,15 @@ class LinearDiscriminantAnalysis:
             print(f"  F-Score: {f_score[i]:.4f}")
         
         # You can add other metrics here, like AUC-ROC, AUC-PR, etc., if needed
+    
+    def plot_confusion_matrix(self, conf_matrix) -> None:
+        # Plotting the confusion matrix using seaborn heatmap
+        plt.figure(figsize=(8, 6))
+        sb.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", xticklabels=lda.classes, yticklabels=lda.classes)
+        plt.title("Confusion Matrix")
+        plt.xlabel("Predicted")
+        plt.ylabel("True")
+        plt.show()
 
 # Testing
 if __name__ == "__main__":
@@ -279,17 +288,5 @@ if __name__ == "__main__":
     lda.predict(validation.drop(columns=['war_class']).to_numpy())
     accuracy = lda.evaluate(validation["war_class"].to_numpy())
     conf_matrix = lda.get_confusion_matrix(validation["war_class"].to_numpy())
-    # Print the accuracy
-    # print(f"Accuracy: {accuracy}")
-    # print("Precision: ", lda.get_precision(conf_matrix))
-    # print("Recall: ", lda.get_recall(conf_matrix))
-    # print("F-Score: ", lda.get_f_score(conf_matrix))
     lda.print_metrics(validation["war_class"].to_numpy())
-
-    # Plotting the confusion matrix using seaborn heatmap
-    plt.figure(figsize=(8, 6))
-    sb.heatmap(conf_matrix, annot=True, fmt="d", cmap="Blues", xticklabels=lda.classes, yticklabels=lda.classes)
-    plt.title("Confusion Matrix")
-    plt.xlabel("Predicted")
-    plt.ylabel("True")
-    plt.show()
+    lda.plot_confusion_matrix(conf_matrix)
