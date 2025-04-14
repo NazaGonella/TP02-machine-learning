@@ -508,42 +508,42 @@ class RandomForest:
 #     log_reg.print_metrics()
 #     log_reg.plot_confusion_matrix()
 
-if __name__ == "__main__":
-    # Imports
-    import pandas as pd
-    import numpy as np
-    import matplotlib.pyplot as plt
-    import seaborn as sb
-    import os
-    import preprocessing as prepro
-    import data_handler
-    from IPython.display import display
+# if __name__ == "__main__":
+#     # Imports
+#     import pandas as pd
+#     import numpy as np
+#     import matplotlib.pyplot as plt
+#     import seaborn as sb
+#     import os
+#     import preprocessing as prepro
+#     import data_handler
+#     from IPython.display import display
 
-    project_root = os.path.abspath(os.path.join(os.getcwd(), ".."))
+#     project_root = os.path.abspath(os.path.join(os.getcwd(), ".."))
 
-    war_class_dev : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_dev.csv')
-    war_class_test : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_test.csv')
+#     war_class_dev : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_dev.csv')
+#     war_class_test : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_test.csv')
 
-    war_class_dev_processed_and_standardized : pd.DataFrame = prepro.process_and_stardardize(
-        war_class_dev, 
-        filename='war_class_dev', 
-        save_path=f'{project_root}/TP02/problema2/data/processed/'
-    )
+#     war_class_dev_processed_and_standardized : pd.DataFrame = prepro.process_and_stardardize(
+#         war_class_dev, 
+#         filename='war_class_dev', 
+#         save_path=f'{project_root}/TP02/problema2/data/processed/'
+#     )
 
-    train : pd.DataFrame
-    validation : pd.DataFrame
-    train, validation = data_handler.get_train_and_validation_sets(war_class_dev_processed_and_standardized, train_fraction=0.8, seed=42)
+#     train : pd.DataFrame
+#     validation : pd.DataFrame
+#     train, validation = data_handler.get_train_and_validation_sets(war_class_dev_processed_and_standardized, train_fraction=0.8, seed=42)
 
-    # Train RandomForest model
-    rf = RandomForest(n_trees=10, min_samples_split=2, max_depth=10)
-    rf.fit(train.drop(columns=['war_class']).to_numpy(), train['war_class'].to_numpy())
-    print("LISTO")
+#     # Train RandomForest model
+#     rf = RandomForest(n_trees=10, min_samples_split=2, max_depth=10)
+#     rf.fit(train.drop(columns=['war_class']).to_numpy(), train['war_class'].to_numpy())
+#     print("LISTO")
 
-    # Predict and evaluate the model
-    rf.predict(validation.drop(columns=['war_class']).to_numpy())
-    total_accuracy : float = rf.evaluate(validation['war_class'].to_numpy())
-    print("Total Accuracy: ", total_accuracy)
-    rf.print_metrics(validation["war_class"].to_numpy())
+#     # Predict and evaluate the model
+#     rf.predict(validation.drop(columns=['war_class']).to_numpy())
+#     total_accuracy : float = rf.evaluate(validation['war_class'].to_numpy())
+#     print("Total Accuracy: ", total_accuracy)
+#     rf.print_metrics(validation["war_class"].to_numpy())
 
-    # # Plot confusion matrix
-    rf.plot_confusion_matrix(rf.get_confusion_matrix(validation["war_class"].to_numpy()))
+#     # # Plot confusion matrix
+#     rf.plot_confusion_matrix(rf.get_confusion_matrix(validation["war_class"].to_numpy()))
