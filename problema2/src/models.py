@@ -217,8 +217,8 @@ class LinearDiscriminantAnalysis:
         return TP / (TP + FN) if (TP + FN) > 0 else 0.0
     
     def get_f_score(self, conf_matrix: np.ndarray, class_label : int) -> np.ndarray:
-        precision = self.get_precision(conf_matrix)
-        recall = self.get_recall(conf_matrix)
+        precision = self.get_precision(conf_matrix, class_label=class_label)
+        recall = self.get_recall(conf_matrix, class_label=class_label)
         return 2 * (precision * recall) / (precision + recall)
     
     
@@ -250,6 +250,7 @@ class LinearDiscriminantAnalysis:
             # print(f"  Recall: {recall[i]:.4f}")
             print(f"Recall: {self.get_recall(conf_matrix=conf_matrix, class_label=i+1):.4f}")
             # print(f"  F-Score: {f_score[i]:.4f}")
+            print(f"F-Score: {self.get_f_score(conf_matrix=conf_matrix, class_label=i+1):.4f}")
         
         # You can add other metrics here, like AUC-ROC, AUC-PR, etc., if needed
     
