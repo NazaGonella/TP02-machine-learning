@@ -37,7 +37,7 @@ class LogisticRegression:
             attempts = 0
             while True:
                 pred = self.sigmoid_function(self.x @ w)
-                print(self.binary_cross_entropy(pred=pred, target=y_binary, w=w))
+                # print(self.binary_cross_entropy(pred=pred, target=y_binary, w=w))
                 grad = self.gradiente_cross_entropy(self.x, pred, y_binary, w)
                 if (np.linalg.norm(grad) <= tolerance and tolerance != -1) or \
                    (attempts >= max_number_of_steps and max_number_of_steps != -1):
@@ -94,6 +94,8 @@ class LogisticRegression:
         sb.heatmap(conf_matrix, annot=True, fmt='d', cmap='Purples')
         plt.title('Multiclass Confusion Matrix')
         plt.show()
+    
+    
 
 class LinearDiscriminantAnalysis:
     def __init__(self, x: np.ndarray, y: np.ndarray):
@@ -258,7 +260,6 @@ class LinearDiscriminantAnalysis:
     def print_metrics(self, ground_truth: np.ndarray) -> None:
         if self.pred_labels.size == 0:
             raise RuntimeError("Debe ejecutar predict() antes de evaluar.")
-        conf_matrix = self.get_confusion_matrix(ground_truth)     
         for label in self.classes:
             print(f"\nClass {label}:")
             print(f"Precision: {self.get_precision(class_label=label, from_threshold=False):.4f}")
@@ -273,7 +274,6 @@ class LinearDiscriminantAnalysis:
             sorted_y = np.sort(trues_positives_rateses)
             print(f"AUC-PR: {np.trapz(y=sorted_y, x=sorted_x):.4f}")
 
-    
     def plot_confusion_matrix(self, conf_matrix) -> None:
         # Plotting the confusion matrix using seaborn heatmap
         plt.figure(figsize=(8, 6))
@@ -306,43 +306,6 @@ class LinearDiscriminantAnalysis:
         plt.show()
 
 # Testing
-# if __name__ == "__main__":
-#     # Imports
-#     import pandas as pd
-#     import numpy as np
-#     import matplotlib.pyplot as plt
-#     import seaborn as sb
-#     import os
-#     import preprocessing as prepro
-#     import data_handler
-#     from IPython.display import display
-
-#     project_root = os.path.abspath(os.path.join(os.getcwd(), ".."))
-
-#     war_class_dev : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_dev.csv')
-#     war_class_test : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_test.csv')
-
-#     war_class_dev_processed_and_standardized : pd.DataFrame = prepro.process_and_stardardize(
-#         war_class_dev, 
-#         filename='war_class_dev', 
-#         save_path=f'{project_root}/TP02/problema2/data/processed/'
-#     )
-
-#     train : pd.DataFrame
-#     validation : pd.DataFrame
-#     train, validation = data_handler.get_train_and_validation_sets(war_class_dev_processed_and_standardized, train_fraction=0.8, seed=42)
-
-#     lda = LinearDiscriminantAnalysis(train.drop(columns=['war_class']).to_numpy(), train['war_class'].to_numpy())
-#     lda.fit()
-#     lda.predict(validation.drop(columns=['war_class']).to_numpy())
-#     total_accuracy : float = lda.evaluate(validation['war_class'].to_numpy())
-#     lda.evaluate_threshold(validation['war_class'].to_numpy(), threshold=0.5)
-#     print("Total Accuracy: ", total_accuracy)
-#     lda.print_metrics(validation["war_class"].to_numpy())
-#     lda.plot_confusion_matrix(lda.get_confusion_matrix(validation["war_class"].to_numpy()))
-#     lda.plot_roc_curve()
-#     lda.plot_pr_curve()
-
 if __name__ == "__main__":
     # Imports
     import pandas as pd
@@ -369,10 +332,47 @@ if __name__ == "__main__":
     validation : pd.DataFrame
     train, validation = data_handler.get_train_and_validation_sets(war_class_dev_processed_and_standardized, train_fraction=0.8, seed=42)
 
-    log_reg : LogisticRegression = LogisticRegression(train.drop(columns=['war_class']).to_numpy(), train['war_class'].to_numpy(), L2=0)
-    log_reg.fit_gradient_descent(step_size=0.001, tolerance=0.001, max_number_of_steps=10000)
-    total_accuracy : float = log_reg.get_accuracy()
-    # log_reg.evaluate(validation['war_class'].to_numpy())
-    log_reg.evaluate(ground_truth=validation['war_class'].to_numpy(), input=validation.drop(columns=['war_class']).to_numpy())
-    log_reg.print_metrics()
-    log_reg.plot_confusion_matrix()
+    lda = LinearDiscriminantAnalysis(train.drop(columns=['war_class']).to_numpy(), train['war_class'].to_numpy())
+    lda.fit()
+    lda.predict(validation.drop(columns=['war_class']).to_numpy())
+    total_accuracy : float = lda.evaluate(validation['war_class'].to_numpy())
+    lda.evaluate_threshold(validation['war_class'].to_numpy(), threshold=0.5)
+    print("Total Accuracy: ", total_accuracy)
+    lda.print_metrics(validation["war_class"].to_numpy())
+    lda.plot_confusion_matrix(lda.get_confusion_matrix(validation["war_class"].to_numpy()))
+    lda.plot_roc_curve()
+    lda.plot_pr_curve()
+
+# if __name__ == "__main__":
+#     # Imports
+#     import pandas as pd
+#     import numpy as np
+#     import matplotlib.pyplot as plt
+#     import seaborn as sb
+#     import os
+#     import preprocessing as prepro
+#     import data_handler
+#     from IPython.display import display
+
+#     project_root = os.path.abspath(os.path.join(os.getcwd(), ".."))
+
+#     war_class_dev : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_dev.csv')
+#     war_class_test : pd.DataFrame = pd.read_csv(f'{project_root}/TP02/problema2/data/raw/WAR_class_test.csv')
+
+#     war_class_dev_processed_and_standardized : pd.DataFrame = prepro.process_and_stardardize(
+#         war_class_dev, 
+#         filename='war_class_dev', 
+#         save_path=f'{project_root}/TP02/problema2/data/processed/'
+#     )
+
+#     train : pd.DataFrame
+#     validation : pd.DataFrame
+#     train, validation = data_handler.get_train_and_validation_sets(war_class_dev_processed_and_standardized, train_fraction=0.8, seed=42)
+
+#     log_reg : LogisticRegression = LogisticRegression(train.drop(columns=['war_class']).to_numpy(), train['war_class'].to_numpy(), L2=0)
+#     log_reg.fit_gradient_descent(step_size=0.001, tolerance=0.001, max_number_of_steps=10000)
+#     total_accuracy : float = log_reg.get_accuracy()
+#     # log_reg.evaluate(validation['war_class'].to_numpy())
+#     log_reg.evaluate(ground_truth=validation['war_class'].to_numpy(), input=validation.drop(columns=['war_class']).to_numpy())
+#     log_reg.print_metrics()
+#     log_reg.plot_confusion_matrix()
