@@ -311,6 +311,15 @@ class LinearDiscriminantAnalysis:
             print(f"Precision: {self.get_precision(class_label=label, from_threshold=False):.4f}")
             print(f"Recall: {self.get_recall(class_label=label, from_threshold=False):.4f}")
             print(f"F-Score: {self.get_f_score(class_label=label, from_threshold=False):.4f}")
+            recalls, precisions = self.get_roc_points(validation["war_class"].to_numpy(), label, 20)
+            sorted_x : np.ndarray[float] = np.sort(recalls)
+            sorted_y : np.ndarray[float] = np.sort(precisions)
+            falses_positives_rateses, trues_positives_rateses = self.get_pr_points(validation["war_class"].to_numpy(), label, 20)
+            print(f"AUC-ROC: {np.trapz(y=recalls, x=precisions):.4f}")
+            sorted_x = np.sort(falses_positives_rateses)
+            sorted_y = np.sort(trues_positives_rateses)
+            print(f"AUC-PR: {np.trapz(y=sorted_y, x=sorted_x):.4f}")
+
     
     def plot_confusion_matrix(self, conf_matrix) -> None:
         # Plotting the confusion matrix using seaborn heatmap
@@ -325,7 +334,7 @@ class LinearDiscriminantAnalysis:
         for c in self.classes:
             recalls, precisions = self.get_roc_points(validation["war_class"].to_numpy(), c, 20)
             plt.plot(recalls, precisions, label=f'Class {c}')
-        plt.title("Precision-Recall (PR)")
+        plt.title("ROC")
         plt.grid(visible=True, alpha=0.5)
         plt.xlabel("Recall")
         plt.ylabel("Precision")
@@ -380,7 +389,7 @@ if __name__ == "__main__":
     print("Total Accuracy: ", total_accuracy)
     lda.print_metrics(validation["war_class"].to_numpy())
     lda.plot_confusion_matrix(conf_matrix)
-    lda.plot_pr_curve()
     lda.plot_roc_curve()
+    lda.plot_pr_curve()
     # print("AUC-PR  : ", utils.get_area_under_curve(recalls, precisions))
     # print("AUC-ROC : ", utils.get_area_under_curve(falses_positives_rateses, recalls))
