@@ -139,55 +139,6 @@ class LogisticRegression:
         self.fn : int = original_fn
         return (falses_positives_rateses, trues_positives_rateses)
 
-# class LDA:
-#     # def __init__(self, n_components):
-#     def __init__(self, x : np.ndarray, b : np.ndarray, n_components : int):
-#         self.linear_discriminants = None
-#         self.n_components : int = n_components
-#         self.x : np.ndarray = x
-#         self.b : np.ndarray = b
-
-#     def fit(self):
-#         n_features = self.x.shape[1]
-#         class_labels = np.unique(self.b)
-
-#         # Within class scatter matrix:
-#         # SW = sum((X_c - mean_X_c)^2 )
-
-#         # Between class scatter:
-#         # SB = sum( n_c * (mean_X_c - mean_overall)^2 )
-
-#         mean_overall = np.mean(self.x, axis=0)
-#         SW = np.zeros((n_features, n_features))
-#         SB = np.zeros((n_features, n_features))
-#         for c in class_labels:
-#             X_c = np.array(self.x[self.b == c], dtype=np.float64)
-#             mean_c = np.array(np.mean(X_c, axis=0), dtype=np.float64)
-#             # (4, n_c) * (n_c, 4) = (4,4) -> transpose
-#             SW += (X_c - mean_c).T.dot((X_c - mean_c))
-
-#             # (4, 1) * (1, 4) = (4,4) -> reshape
-#             n_c = X_c.shape[0]
-#             mean_diff = (mean_c - mean_overall).reshape(n_features, 1).astype(np.float64)
-#             SB += n_c * (mean_diff).dot(mean_diff.T)
-
-#         # Determine SW^-1 * SB
-#         A = np.linalg.inv(SW).dot(SB)
-#         # Get eigenvalues and eigenvectors of SW^-1 * SB
-#         eigenvalues, eigenvectors = np.linalg.eig(A)
-#         # -> eigenvector v = [:,i] column vector, transpose for easier calculations
-#         # sort eigenvalues high to low
-#         eigenvectors = eigenvectors.T
-#         idxs = np.argsort(abs(eigenvalues))[::-1]
-#         eigenvalues = eigenvalues[idxs]
-#         eigenvectors = eigenvectors[idxs]
-#         # store first n eigenvectors
-#         self.linear_discriminants = eigenvectors[0 : self.n_components]
-
-#     def transform(self):
-#         # project data
-#         return np.dot(self.x, self.linear_discriminants.T)
-
 class LinearDiscriminantAnalysis:
     def __init__(self, x: np.ndarray, y: np.ndarray):
         self.x: np.ndarray = np.array(x, dtype=np.float64)
@@ -217,14 +168,9 @@ class LinearDiscriminantAnalysis:
     def _discriminant_function(self, x: np.ndarray, c: int) -> float:
         mu = self.means[c]
         prior = self.priors[c]
-        # print(x.shape)
-        # print(self.inv_covariance.shape)
         return float(x @ self.inv_covariance @ mu.T - 0.5 * mu.T @ self.inv_covariance @ mu + np.log(prior))
 
     def predict(self, input: np.ndarray) -> None:
-        if not self.fitted:
-            raise RuntimeError("El modelo debe ser entrenado con fit() antes de predecir.")
-        
         input = np.array(input, dtype=np.float64)
         pred = []
         for x_i in input:
@@ -251,8 +197,55 @@ class LinearDiscriminantAnalysis:
             matrix[i][j] += 1
 
         return matrix
+
+    def get_precision(self, conf_matrix: np.ndarray) -> np.ndarray:
+        precision_scores = []
+        for i in range(conf_matrix.shape[0]):
+            TP = conf_matrix[i, i]
+            FP = np.sum(conf_matrix[:, i]) - TP
+            precision_scores.append(TP / (TP + FP) if TP + FP > 0 else 0.0)
+        return np.array(precision_scores)
+
+    def get_recall(self, conf_matrix: np.ndarray) -> np.ndarray:
+        recall_scores = []
+        for i in range(conf_matrix.shape[0]):
+            TP = conf_matrix[i, i]
+            FN = np.sum(conf_matrix[i, :]) - TP
+            recall_scores.append(TP / (TP + FN) if TP + FN > 0 else 0.0)
+        return np.array(recall_scores)
     
+    def get_f_score(self, conf_matrix: np.ndarray) -> np.ndarray:
+        precision = self.get_precision(conf_matrix)
+        recall = self.get_recall(conf_matrix)
+        return 2 * (precision * recall) / (precision + recall)
     
+    def print_metrics(self, ground_truth: np.ndarray) -> None:
+        if self.pred_labels.size == 0:
+            raise RuntimeError("Debe ejecutar predict() antes de evaluar.")
+        
+        # Get the confusion matrix
+        conf_matrix = self.get_confusion_matrix(ground_truth)
+
+        # Calculate precision, recall, and F-score
+        precision = self.get_precision(conf_matrix)
+        recall = self.get_recall(conf_matrix)
+        f_score = self.get_f_score(conf_matrix)
+        
+        # Calculate accuracy
+        accuracy = self.evaluate(ground_truth)
+
+        # Print the metrics
+        print("Confusion Matrix:")
+        print(conf_matrix)
+        print("\nAccuracy: {:.4f}".format(accuracy))
+        
+        for i, class_label in enumerate(self.classes):
+            print(f"\nClass {class_label}:")
+            print(f"  Precision: {precision[i]:.4f}")
+            print(f"  Recall: {recall[i]:.4f}")
+            print(f"  F-Score: {f_score[i]:.4f}")
+        
+        # You can add other metrics here, like AUC-ROC, AUC-PR, etc., if needed
 
 # Testing
 if __name__ == "__main__":
@@ -280,30 +273,6 @@ if __name__ == "__main__":
     train : pd.DataFrame
     validation : pd.DataFrame
     train, validation = data_handler.get_train_and_validation_sets(war_class_dev_processed_and_standardized, train_fraction=0.8, seed=42)
-    # X, y = train.drop(columns=['war_class']).to_numpy(), train[['war_class']].to_numpy().flatten()
-    # display(train.info())
-    # print(X.shape)
-    # print("")
-    # print(y.shape)
-
-    # Project the data onto the 2 primary linear discriminants
-    # lda = LDA(x = X, b = y, n_components=2)
-    # lda.fit()
-    # X_projected = lda.transform()
-
-    # print("Shape of X:", X.shape)
-    # print("Shape of transformed X:", X_projected.shape)
-
-    # x1, x2 = X_projected[:, 0], X_projected[:, 1]
-
-    # plt.scatter(
-    #     x1, x2, c=y, edgecolor="none", alpha=0.8, cmap=plt.cm.get_cmap("viridis", 3)
-    # )
-
-    # plt.xlabel("Linear Discriminant 1")
-    # plt.ylabel("Linear Discriminant 2")
-    # plt.colorbar()
-    # plt.show()
 
     lda = LinearDiscriminantAnalysis(train.drop(columns=['war_class']).to_numpy(), train['war_class'].to_numpy())
     lda.fit()
@@ -311,7 +280,11 @@ if __name__ == "__main__":
     accuracy = lda.evaluate(validation["war_class"].to_numpy())
     conf_matrix = lda.get_confusion_matrix(validation["war_class"].to_numpy())
     # Print the accuracy
-    print(f"Accuracy: {accuracy}")
+    # print(f"Accuracy: {accuracy}")
+    # print("Precision: ", lda.get_precision(conf_matrix))
+    # print("Recall: ", lda.get_recall(conf_matrix))
+    # print("F-Score: ", lda.get_f_score(conf_matrix))
+    lda.print_metrics(validation["war_class"].to_numpy())
 
     # Plotting the confusion matrix using seaborn heatmap
     plt.figure(figsize=(8, 6))
